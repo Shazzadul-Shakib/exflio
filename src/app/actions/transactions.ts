@@ -1,0 +1,98 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { requireUser } from "@/lib/session";
+import { createTransaction, updateTransaction, deleteTransaction, MutationError } from "@/lib/mutations";
+import type { TransactionKind } from "@/lib/types";
+
+export interface TransactionFormState {
+  error?: string;
+  fieldErrors?: Record<string, string>;
+  success?: boolean;
+}
+
+function str(formData: FormData, key: string): string {
+  const value = formData.get(key);
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function parseInput(formData: FormData) {
+  const kind = str(formData, "kind") as TransactionKind;
+  const walletId = str(formData, "walletId");
+  const toWalletId = str(formData, "toWalletId") || null;
+  const category = str(formData, "category");
+  const amountRaw = str(formData, "amount");
+  const date = str(formData, "date");
+  const note = str(formData, "note");
+  const amount = Number(amountRaw);
+
+  const fieldErrors: Record<string, string> = {};
+  if (!["expense", "income", "transfer"].includes(kind)) fieldErrors.kind = "Pick a type.";
+  if (!walletId) fieldErrors.walletId = kind === "transfer" ? "Pick a source wallet." : "Pick a wallet.";
+  if (kind === "transfer" && !toWalletId) fieldErrors.toWalletId = "Pick a destination wallet.";
+  if (kind === "transfer" && toWalletId && toWalletId === walletId) fieldErrors.toWalletId = "Choose a different wallet.";
+  if (kind !== "transfer" && !category) fieldErrors.category = "Pick a category.";
+  if (!amountRaw || !Number.isFinite(amount) || amount <= 0) fieldErrors.amount = "Enter an amount greater than 0.";
+  if (!date || Number.isNaN(Date.parse(date))) fieldErrors.date = "Pick a valid date.";
+
+  return { input: { kind, walletId, toWalletId, category, amount, date, note }, fieldErrors };
+}
+
+export async function createTransactionAction(
+  _prevState: TransactionFormState,
+  formData: FormData
+): Promise<TransactionFormState> {
+  const user = await requireUser();
+  const { input, fieldErrors } = parseInput(formData);
+  if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
+
+  try {
+    await createTransaction(user.id, input);
+  } catch (error) {
+    return { error: error instanceof MutationError ? error.message : "Could not save this transaction." };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/wallets");
+  revalidatePath("/transactions");
+  revalidatePath("/savings");
+  revalidatePath("/debts");
+  return { success: true };
+}
+
+export async function updateTransactionAction(
+  transactionId: string,
+  _prevState: TransactionFormState,
+  formData: FormData
+): Promise<TransactionFormState> {
+  const user = await requireUser();
+  const { input, fieldErrors } = parseInput(formData);
+  if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
+
+  try {
+    await updateTransaction(user.id, transactionId, input);
+  } catch (error) {
+    return { error: error instanceof MutationError ? error.message : "Could not update this transaction." };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/wallets");
+  revalidatePath("/transactions");
+  revalidatePath("/savings");
+  revalidatePath("/debts");
+  return { success: true };
+}
+
+export async function deleteTransactionAction(transactionId: string): Promise<void> {
+  const user = await requireUser();
+  try {
+    await deleteTransaction(user.id, transactionId);
+  } catch {
+    // Silently ignore — the row is already gone from the user's perspective.
+  }
+  revalidatePath("/dashboard");
+  revalidatePath("/wallets");
+  revalidatePath("/transactions");
+  revalidatePath("/savings");
+  revalidatePath("/debts");
+}

@@ -1,0 +1,77 @@
+import type { Metadata } from "next";
+import { PiggyBank } from "lucide-react";
+import { requireUser } from "@/lib/session";
+import { getUserWallets, getUserTransactions } from "@/lib/queries";
+import { parseFilters, applyFilters } from "@/lib/transactionFilters";
+import { totalSavings } from "@/lib/finance";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { WalletCard } from "@/components/wallets/WalletCard";
+import { CreateWalletButton } from "@/components/wallets/CreateWalletButton";
+import { FilterBar } from "@/components/transactions/FilterBar";
+import { TransactionTable } from "@/components/transactions/TransactionTable";
+import { AddTransactionButton } from "@/components/transactions/AddTransactionButton";
+import { EmptyState } from "@/components/ui";
+
+export const metadata: Metadata = { title: "Savings — Exflio" };
+
+export default async function SavingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const user = await requireUser();
+  const [wallets, transactions, rawParams] = await Promise.all([
+    getUserWallets(user.id),
+    getUserTransactions(user.id),
+    searchParams,
+  ]);
+
+  const savingsWallets = wallets.filter((w) => w.type === "savings" && !w.archived);
+  const savingsIds = new Set(savingsWallets.map((w) => w.id));
+  const related = transactions.filter((t) => savingsIds.has(t.walletId) || (t.toWalletId && savingsIds.has(t.toWalletId)));
+
+  const filters = parseFilters(rawParams);
+  const filtered = applyFilters(related, filters);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight text-text-primary">Savings</h2>
+          <p className="text-[13px] text-text-muted">Money set aside, growing quietly in the background.</p>
+        </div>
+        <CreateWalletButton label="Add savings wallet" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Total savings" value={totalSavings(wallets)} icon={PiggyBank} accent="good" hint={`${savingsWallets.length} wallet${savingsWallets.length === 1 ? "" : "s"}`} />
+        {savingsWallets.map((w) => (
+          <WalletCard key={w.id} wallet={w} />
+        ))}
+      </div>
+
+      {savingsWallets.length === 0 ? (
+        <EmptyState
+          icon={PiggyBank}
+          title="No savings wallets yet"
+          description="Create a savings wallet, then transfer money into it to start building a cushion."
+          action={<CreateWalletButton label="Create a savings wallet" />}
+        />
+      ) : (
+        <>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-sm font-semibold text-text-primary">History</h3>
+            <AddTransactionButton wallets={wallets.filter((w) => !w.archived)} defaultWalletId={savingsWallets[0]?.id} />
+          </div>
+          <FilterBar wallets={savingsWallets} showWalletFilter />
+          <TransactionTable transactions={filtered} wallets={wallets} />
+        </>
+      )}
+
+      <p className="text-[12.5px] text-text-muted">
+        Tip: record a <span className="font-medium text-text-primary">transfer</span> from a cash or bank wallet into a savings
+        wallet to move money into savings — its balance updates automatically.
+      </p>
+    </div>
+  );
+}

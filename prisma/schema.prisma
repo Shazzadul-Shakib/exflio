@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WalletType {
+  cash
+  bank
+  savings
+  debt
+}
+
+enum TransactionKind {
+  expense
+  income
+  transfer
+}
+
+model User {
+  id           String   @id
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  passwordSalt String   @map("password_salt")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  wallets      Wallet[]
+  transactions Transaction[]
+
+  @@map("users")
+}
+
+model Wallet {
+  id        String     @id
+  userId    String     @map("user_id")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  type      WalletType
+  balance   Decimal    @default(0) @db.Decimal(14, 2)
+  currency  String     @default("USD")
+  note      String     @default("")
+  archived  Boolean    @default(false)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  outgoingTransactions Transaction[] @relation("SourceWallet")
+  incomingTransfers    Transaction[] @relation("DestinationWallet")
+
+  @@index([userId])
+  @@map("wallets")
+}
+
+model Transaction {
+  id         String          @id
+  userId     String          @map("user_id")
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletId   String          @map("wallet_id")
+  wallet     Wallet          @relation("SourceWallet", fields: [walletId], references: [id], onDelete: Cascade)
+  toWalletId String?         @map("to_wallet_id")
+  toWallet   Wallet?         @relation("DestinationWallet", fields: [toWalletId], references: [id], onDelete: Cascade)
+  kind       TransactionKind
+  category   String
+  amount     Decimal         @db.Decimal(14, 2)
+  date       DateTime        @db.Date
+  note       String          @default("")
+  createdAt  DateTime        @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([walletId])
+  @@index([toWalletId])
+  @@map("transactions")
+}
