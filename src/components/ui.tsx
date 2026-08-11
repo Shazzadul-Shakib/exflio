@@ -8,7 +8,7 @@ import {
   type LabelHTMLAttributes,
 } from "react";
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
+import { Loader2, type LucideIcon } from "lucide-react";
 import { cx } from "@/components/cx";
 import { Dropdown } from "@/components/Dropdown";
 
@@ -33,16 +33,20 @@ const buttonSizes = {
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: keyof typeof buttonVariants;
   size?: keyof typeof buttonSizes;
+  /** Shows a spinner and disables the button — for an in-flight submit/action. */
+  loading?: boolean;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(
-    { className, variant = "primary", size = "md", ...props },
+    { className, variant = "primary", size = "md", loading = false, disabled, children, ...props },
     ref,
   ) {
     return (
       <button
         ref={ref}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
         className={cx(
           buttonBase,
           buttonVariants[variant],
@@ -50,7 +54,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           className,
         )}
         {...props}
-      />
+      >
+        {loading && <Loader2 className="h-4 w-4 shrink-0 animate-spin" strokeWidth={2} />}
+        {children}
+      </button>
     );
   },
 );

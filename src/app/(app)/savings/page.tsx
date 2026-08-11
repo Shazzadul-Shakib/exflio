@@ -26,8 +26,11 @@ export default async function SavingsPage({
     searchParams,
   ]);
 
-  const savingsWallets = wallets.filter((w) => w.type === "savings" && !w.archived);
-  const savingsIds = new Set(savingsWallets.map((w) => w.id));
+  // History includes archived savings wallets too, so their transactions stay
+  // visible here even if they later drop off the active list below.
+  const allSavingsWallets = wallets.filter((w) => w.type === "savings");
+  const savingsWallets = allSavingsWallets.filter((w) => !w.archived);
+  const savingsIds = new Set(allSavingsWallets.map((w) => w.id));
   const related = transactions.filter((t) => savingsIds.has(t.walletId) || (t.toWalletId && savingsIds.has(t.toWalletId)));
 
   const filters = parseFilters(rawParams);
@@ -40,7 +43,7 @@ export default async function SavingsPage({
           <h2 className="text-xl font-semibold tracking-tight text-text-primary">Savings</h2>
           <p className="text-[13px] text-text-muted">Money set aside, growing quietly in the background.</p>
         </div>
-        <CreateWalletButton label="Add savings wallet" />
+        <CreateWalletButton label="Add savings wallet" wallets={wallets} defaultType="savings" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -50,12 +53,12 @@ export default async function SavingsPage({
         ))}
       </div>
 
-      {savingsWallets.length === 0 ? (
+      {allSavingsWallets.length === 0 ? (
         <EmptyState
           icon={PiggyBank}
           title="No savings wallets yet"
           description="Create a savings wallet, then transfer money into it to start building a cushion."
-          action={<CreateWalletButton label="Create a savings wallet" />}
+          action={<CreateWalletButton label="Create a savings wallet" wallets={wallets} defaultType="savings" />}
         />
       ) : (
         <>
@@ -63,7 +66,7 @@ export default async function SavingsPage({
             <h3 className="text-sm font-semibold text-text-primary">History</h3>
             <AddTransactionButton wallets={wallets.filter((w) => !w.archived)} defaultWalletId={savingsWallets[0]?.id} />
           </div>
-          <FilterBar wallets={savingsWallets} showWalletFilter />
+          <FilterBar wallets={allSavingsWallets} showWalletFilter />
           <TransactionTable transactions={filtered} wallets={wallets} />
         </>
       )}

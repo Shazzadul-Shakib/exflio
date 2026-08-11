@@ -5,8 +5,17 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { WalletForm } from "./WalletForm";
+import type { Wallet, WalletType } from "@/lib/types";
 
-export function CreateWalletButton({ label = "Add wallet" }: { label?: string }) {
+export function CreateWalletButton({
+  label = "Add wallet",
+  wallets = [],
+  defaultType = "cash",
+}: {
+  label?: string;
+  wallets?: Wallet[];
+  defaultType?: WalletType;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -15,7 +24,7 @@ export function CreateWalletButton({ label = "Add wallet" }: { label?: string })
         {label}
       </Button>
       <Modal open={open} onClose={() => setOpen(false)} title="New wallet">
-        <WalletForm onSuccess={() => setOpen(false)} />
+        <WalletForm wallets={wallets} defaultType={defaultType} onSuccess={() => setOpen(false)} />
       </Modal>
     </>
   );

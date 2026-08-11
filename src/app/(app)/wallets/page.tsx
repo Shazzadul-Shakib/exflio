@@ -25,11 +25,11 @@ export default async function WalletsPage() {
           <h2 className="text-xl font-semibold tracking-tight text-text-primary">Wallets</h2>
           <p className="text-[13px] text-text-muted">Cash, bank, savings and debt accounts in one place.</p>
         </div>
-        <CreateWalletButton />
+        <CreateWalletButton wallets={wallets} />
       </div>
 
       {wallets.length === 0 ? (
-        <EmptyState icon={WalletIcon} title="No wallets yet" description="Create your first wallet to start tracking money." action={<CreateWalletButton label="Create a wallet" />} />
+        <EmptyState icon={WalletIcon} title="No wallets yet" description="Create your first wallet to start tracking money." action={<CreateWalletButton label="Create a wallet" wallets={wallets} />} />
       ) : (
         SECTION_ORDER.map((type) => {
           const group = wallets.filter((w) => w.type === type);

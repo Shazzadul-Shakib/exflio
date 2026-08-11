@@ -3,12 +3,28 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Menu } from "lucide-react";
+import { useFormStatus } from "react-dom";
+import { Loader2, LogOut, Menu } from "lucide-react";
 import { NAV_ITEMS } from "./nav-items";
 import { logoutAction } from "@/app/actions/auth";
 import type { PublicUser } from "@/lib/types";
 import { cx } from "@/components/ui";
 import { Logomark } from "@/components/Logomark";
+
+function LogoutButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      aria-busy={pending || undefined}
+      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-2 hover:text-status-critical disabled:pointer-events-none disabled:opacity-50"
+    >
+      {pending ? <Loader2 className="h-4.5 w-4.5 animate-spin" strokeWidth={2} /> : <LogOut className="h-4.5 w-4.5" strokeWidth={2} />}
+      {pending ? "Logging out…" : "Log out"}
+    </button>
+  );
+}
 
 function initials(name: string): string {
   return name
@@ -64,12 +80,12 @@ function SidebarContent({
 }) {
   return (
     <div className="flex h-full flex-col gap-6 p-4">
-      <div className="flex items-center gap-2 px-2 pt-1">
+      <Link href="/" onClick={onNavigate} className="flex items-center gap-2 px-2 pt-1">
         <Logomark size="sm" />
         <span className="text-base font-semibold text-text-primary">
           Exflio
         </span>
-      </div>
+      </Link>
       <NavLinks pathname={pathname} onNavigate={onNavigate} />
       <div className="mt-auto flex flex-col gap-2 border-t border-border pt-4">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
@@ -84,13 +100,7 @@ function SidebarContent({
           </div>
         </div>
         <form action={logoutAction}>
-          <button
-            type="submit"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-2 hover:text-status-critical"
-          >
-            <LogOut className="h-4.5 w-4.5" strokeWidth={2} />
-            Log out
-          </button>
+          <LogoutButton />
         </form>
       </div>
     </div>

@@ -42,15 +42,22 @@ export function WalletCard({
         >
           <Icon className="h-5 w-5" strokeWidth={2} />
         </span>
-        <span
-          className="rounded-full px-2 py-0.5 text-[11.5px] font-medium"
-          style={{
-            background: `color-mix(in oklab, ${color} 14%, transparent)`,
-            color,
-          }}
-        >
-          {meta.label}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {wallet.archived && (
+            <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11.5px] font-medium text-text-muted">
+              Archived
+            </span>
+          )}
+          <span
+            className="rounded-full px-2 py-0.5 text-[11.5px] font-medium"
+            style={{
+              background: `color-mix(in oklab, ${color} 14%, transparent)`,
+              color,
+            }}
+          >
+            {meta.label}
+          </span>
+        </div>
       </div>
       <div>
         <p className="truncate text-sm font-medium text-text-secondary">

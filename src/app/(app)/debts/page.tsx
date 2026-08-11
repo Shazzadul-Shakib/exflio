@@ -26,8 +26,11 @@ export default async function DebtsPage({
     searchParams,
   ]);
 
-  const debtWallets = wallets.filter((w) => w.type === "debt" && !w.archived);
-  const debtIds = new Set(debtWallets.map((w) => w.id));
+  // History includes archived (paid-off) debt wallets too, so a cleared debt's
+  // transactions stay visible here even after it drops off the active list below.
+  const allDebtWallets = wallets.filter((w) => w.type === "debt");
+  const debtWallets = allDebtWallets.filter((w) => !w.archived);
+  const debtIds = new Set(allDebtWallets.map((w) => w.id));
   const related = transactions.filter((t) => debtIds.has(t.walletId) || (t.toWalletId && debtIds.has(t.toWalletId)));
 
   const filters = parseFilters(rawParams);
@@ -40,7 +43,7 @@ export default async function DebtsPage({
           <h2 className="text-xl font-semibold tracking-tight text-text-primary">Debts</h2>
           <p className="text-[13px] text-text-muted">Credit cards and loans — what you owe, at a glance.</p>
         </div>
-        <CreateWalletButton label="Add debt wallet" />
+        <CreateWalletButton label="Add debt wallet" wallets={wallets} defaultType="debt" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -50,12 +53,12 @@ export default async function DebtsPage({
         ))}
       </div>
 
-      {debtWallets.length === 0 ? (
+      {allDebtWallets.length === 0 ? (
         <EmptyState
           icon={CreditCard}
           title="No debt wallets yet"
           description="Add a debt wallet for a credit card or loan to track what you owe and pay it down over time."
-          action={<CreateWalletButton label="Create a debt wallet" />}
+          action={<CreateWalletButton label="Create a debt wallet" wallets={wallets} defaultType="debt" />}
         />
       ) : (
         <>
@@ -63,15 +66,16 @@ export default async function DebtsPage({
             <h3 className="text-sm font-semibold text-text-primary">History</h3>
             <AddTransactionButton wallets={wallets.filter((w) => !w.archived)} defaultWalletId={debtWallets[0]?.id} />
           </div>
-          <FilterBar wallets={debtWallets} showWalletFilter />
+          <FilterBar wallets={allDebtWallets} showWalletFilter />
           <TransactionTable transactions={filtered} wallets={wallets} />
         </>
       )}
 
       <p className="text-[12.5px] text-text-muted">
         Tip: an <span className="font-medium text-text-primary">expense</span> on a debt wallet increases what you owe (e.g.
-        a credit card purchase); a <span className="font-medium text-text-primary">transfer</span> into it from cash or bank
-        pays it down.
+        a credit card purchase); use <span className="font-medium text-text-primary">Clear debt</span> on a wallet&apos;s
+        page to pay it down. Once it&apos;s fully paid off, the wallet moves off this page automatically — its history stays
+        on the Wallets page.
       </p>
     </div>
   );

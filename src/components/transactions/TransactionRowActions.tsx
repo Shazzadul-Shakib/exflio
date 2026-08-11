@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { Modal } from "@/components/Modal";
+import { Button } from "@/components/ui";
 import { TransactionForm } from "./TransactionForm";
 import { deleteTransactionAction } from "@/app/actions/transactions";
 import type { Transaction, Wallet } from "@/lib/types";
@@ -61,26 +62,22 @@ export function TransactionRowActions({
           balance. This can&apos;t be undone.
         </p>
         <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setConfirmOpen(false)}
-            className="h-9 rounded-lg border border-border px-4 text-sm font-medium text-text-secondary hover:bg-surface-2"
-          >
+          <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)}>
             Cancel
-          </button>
-          <button
-            type="button"
-            disabled={isPending}
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            loading={isPending}
             onClick={() => {
               startTransition(async () => {
                 await deleteTransactionAction(transaction.id);
                 setConfirmOpen(false);
               });
             }}
-            className="h-9 rounded-lg bg-status-critical px-4 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
             {isPending ? "Deleting…" : "Delete"}
-          </button>
+          </Button>
         </div>
       </Modal>
     </div>
