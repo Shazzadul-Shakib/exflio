@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/session";
 import { getUserWallets, getUserTransactions } from "@/lib/queries";
 import {
   monthlyTotals,
-  categoryBreakdown,
+  spendingBreakdown,
   monthlyTrend,
   netWorth,
   totalSavings,
@@ -45,7 +45,7 @@ export default async function DashboardPage({
   const current = monthlyTotals(transactions, year, month);
   const prevYM = shiftYearMonth(year, month, -1);
   const previous = monthlyTotals(transactions, prevYM.year, prevYM.month);
-  const categories = categoryBreakdown(transactions, year, month, "expense");
+  const categories = spendingBreakdown(transactions, year, month);
   const trend = monthlyTrend(transactions, year, month, 6);
   const recent = [...transactions].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0, 6);
 

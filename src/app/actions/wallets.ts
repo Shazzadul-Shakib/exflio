@@ -3,12 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/session";
 import { createWallet, updateWallet, deleteWallet, MutationError } from "@/lib/mutations";
-import type { WalletType } from "@/lib/types";
+import type { Wallet, WalletType } from "@/lib/types";
 
 export interface WalletFormState {
   error?: string;
   fieldErrors?: Record<string, string>;
   success?: boolean;
+  /** The wallet just created — lets a caller (e.g. an inline "create wallet" flow) pick it up without a full page refresh. */
+  wallet?: Wallet;
 }
 
 function str(formData: FormData, key: string): string {
@@ -16,16 +18,14 @@ function str(formData: FormData, key: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-export async function createWalletAction(
-  _prevState: WalletFormState,
-  formData: FormData
-): Promise<WalletFormState> {
+async function createWalletCore(formData: FormData): Promise<WalletFormState> {
   const user = await requireUser();
   const name = str(formData, "name");
   const type = str(formData, "type") as WalletType;
   const balanceRaw = str(formData, "balance");
   const note = str(formData, "note");
   const balance = balanceRaw ? Number(balanceRaw) : 0;
+  const fundingWalletId = str(formData, "fundingWalletId") || null;
 
   const fieldErrors: Record<string, string> = {};
   if (name.length < 1) fieldErrors.name = "Give this wallet a name.";
@@ -33,12 +33,42 @@ export async function createWalletAction(
   if (!Number.isFinite(balance) || balance < 0) fieldErrors.balance = "Enter a starting balance of 0 or more.";
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
-  await createWallet(user.id, { name, type, balance, currency: "USD", note });
-  revalidatePath("/wallets");
-  revalidatePath("/dashboard");
-  revalidatePath("/savings");
-  revalidatePath("/debts");
-  return { success: true };
+  try {
+    const wallet = await createWallet(user.id, { name, type, balance, currency: "USD", note, fundingWalletId });
+    return { success: true, wallet };
+  } catch (error) {
+    return { error: error instanceof MutationError ? error.message : "Could not create this wallet." };
+  }
+}
+
+export async function createWalletAction(
+  _prevState: WalletFormState,
+  formData: FormData
+): Promise<WalletFormState> {
+  const result = await createWalletCore(formData);
+  if (result.success) {
+    revalidatePath("/wallets");
+    revalidatePath("/dashboard");
+    revalidatePath("/savings");
+    revalidatePath("/debts");
+    revalidatePath("/transactions");
+  }
+  return result;
+}
+
+/**
+ * Used by the inline "create a wallet" flow inside Add transaction (when
+ * "Debt"/"Savings" is picked as an expense category and none exists yet).
+ * Deliberately skips revalidation — revalidating the current route here
+ * forces a full router refresh that resets the enclosing transaction modal's
+ * own open/closed state. The transaction submitted right after already
+ * revalidates every path this wallet could show up on.
+ */
+export async function quickCreateWalletAction(
+  _prevState: WalletFormState,
+  formData: FormData
+): Promise<WalletFormState> {
+  return createWalletCore(formData);
 }
 
 export async function updateWalletAction(

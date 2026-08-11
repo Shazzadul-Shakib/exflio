@@ -5,6 +5,7 @@ import {
   CreditCard,
   Gift,
   GraduationCap,
+  Home,
   Lightbulb,
   Landmark,
   Laptop,
@@ -28,16 +29,26 @@ export interface CategoryDef {
   slot: number;
 }
 
+/** Used to tag a debt-clearing transfer so it surfaces in spending breakdowns. */
+export const DEBT_CATEGORY = "Debt";
+/** Used to tag a savings-funding transfer so it surfaces in spending breakdowns. */
+export const SAVINGS_CATEGORY = "Savings";
+
 // Fixed order — colors are assigned by position here, never generated or
 // re-ordered by filters/sorts, so a category always reads as the same hue.
 export const EXPENSE_CATEGORIES: CategoryDef[] = [
   { name: "Food & Dining", icon: Utensils, slot: 1 },
   { name: "Transport", icon: Car, slot: 2 },
   { name: "Bills & Utilities", icon: Lightbulb, slot: 3 },
+  // Only 8 categorical colors exist; a 9th is never generated, so Rent
+  // shares "Other"'s color slot and is told apart by its icon/label instead.
+  { name: "Rent", icon: Home, slot: 8 },
   { name: "Shopping", icon: ShoppingBag, slot: 4 },
   { name: "Entertainment", icon: Clapperboard, slot: 5 },
   { name: "Health", icon: Stethoscope, slot: 6 },
   { name: "Education", icon: GraduationCap, slot: 7 },
+  { name: DEBT_CATEGORY, icon: CreditCard, slot: 8 },
+  { name: SAVINGS_CATEGORY, icon: PiggyBank, slot: 8 },
   { name: "Other", icon: Package, slot: 8 },
 ];
 

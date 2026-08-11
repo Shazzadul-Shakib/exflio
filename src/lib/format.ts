@@ -1,3 +1,5 @@
+import type { WalletType } from "./types";
+
 const currencyFormatterCache = new Map<string, Intl.NumberFormat>();
 
 export function formatCurrency(amount: number, currency = "USD"): string {
@@ -24,6 +26,12 @@ export function formatCompactCurrency(amount: number, currency = "USD"): string 
     maximumFractionDigits: 1,
   });
   return formatter.format(amount);
+}
+
+/** Label for a wallet picker option — what's on hand, or what's owed for a debt wallet. */
+export function walletBalanceLabel(wallet: { type: WalletType; balance: number; currency: string }): string {
+  const amount = formatCurrency(wallet.balance, wallet.currency);
+  return wallet.type === "debt" ? `Owes ${amount}` : `${amount} available`;
 }
 
 export function formatDate(iso: string): string {

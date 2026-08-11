@@ -33,7 +33,7 @@ export function SignupForm() {
           {state.error}
         </p>
       )}
-      <Button type="submit" disabled={pending} className="mt-1 w-full">
+      <Button type="submit" loading={pending} className="mt-1 w-full">
         {pending ? "Creating account…" : "Create account"}
       </Button>
       <p className="text-center text-[13px] text-text-muted">

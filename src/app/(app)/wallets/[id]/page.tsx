@@ -72,6 +72,11 @@ export default async function WalletDetailPage({
                 >
                   {meta.label}
                 </span>
+                {wallet.archived && (
+                  <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11.5px] font-medium text-text-muted">
+                    Archived
+                  </span>
+                )}
               </div>
               {wallet.note && <p className="mt-0.5 text-[13px] text-text-muted">{wallet.note}</p>}
               <p className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">
@@ -79,7 +84,7 @@ export default async function WalletDetailPage({
               </p>
             </div>
           </div>
-          <WalletDetailActions wallet={wallet} />
+          <WalletDetailActions wallet={wallet} wallets={allWallets} />
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-4 border-t border-border pt-4 sm:w-72">

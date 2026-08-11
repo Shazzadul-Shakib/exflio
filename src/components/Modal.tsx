@@ -40,14 +40,21 @@ export function Modal({
 
   if (!mounted) return null;
 
+  // React re-dispatches native events (close/cancel/click) along the React tree,
+  // not the DOM tree — so a nested modal's dialog, despite portaling to a DOM
+  // sibling of this one, is still a React descendant and its close/cancel events
+  // would otherwise bubble up here too. Guard every handler to the dialog's own
+  // native target so one modal closing never closes an ancestor modal.
+  const own = (fn: () => void) => (e: { target: EventTarget | null }) => {
+    if (e.target === dialogRef.current) fn();
+  };
+
   return createPortal(
     <dialog
       ref={dialogRef}
-      onClose={onClose}
-      onCancel={onClose}
-      onClick={(e) => {
-        if (e.target === dialogRef.current) onClose();
-      }}
+      onClose={own(onClose)}
+      onCancel={own(onClose)}
+      onClick={own(onClose)}
       className="m-auto w-[min(520px,92vw)] rounded-lg border border-border bg-surface p-0 text-text-primary backdrop:bg-transparent"
       style={{ boxShadow: "var(--shadow-card)" }}
     >

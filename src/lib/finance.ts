@@ -1,5 +1,6 @@
 import type { Transaction, TransactionKind, Wallet, WalletType } from "./types";
 import { shiftYearMonth } from "./format";
+import { DEBT_CATEGORY, SAVINGS_CATEGORY } from "./categories";
 
 /**
  * How a transaction of `kind` moves a wallet's balance.
@@ -27,17 +28,36 @@ export function sumBy<T>(items: T[], fn: (item: T) => number): number {
   return items.reduce((total, item) => total + fn(item), 0);
 }
 
+const SPENDING_TRANSFER_CATEGORIES = new Set([DEBT_CATEGORY, SAVINGS_CATEGORY]);
+
+/**
+ * A plain expense, or a transfer earmarked as a debt payoff or savings
+ * contribution — both move money out of what's spendable this month, so they
+ * read as "spending" everywhere the dashboard totals up cost, even though
+ * they're modeled as transfers (they also move a wallet balance).
+ */
+function isSpending(t: Transaction): boolean {
+  return t.kind === "expense" || (t.kind === "transfer" && SPENDING_TRANSFER_CATEGORIES.has(t.category));
+}
+
 export function monthlyTotals(transactions: Transaction[], year: number, month: number) {
   const inMonth = transactions.filter((t) => isInMonth(t.date, year, month));
-  const expense = sumBy(
-    inMonth.filter((t) => t.kind === "expense"),
-    (t) => t.amount
-  );
+  const expense = sumBy(inMonth.filter(isSpending), (t) => t.amount);
   const income = sumBy(
     inMonth.filter((t) => t.kind === "income"),
     (t) => t.amount
   );
   return { expense, income, net: income - expense, count: inMonth.length };
+}
+
+function groupByCategory(transactions: Transaction[]): { category: string; amount: number }[] {
+  const byCategory = new Map<string, number>();
+  for (const t of transactions) {
+    byCategory.set(t.category, (byCategory.get(t.category) ?? 0) + t.amount);
+  }
+  return [...byCategory.entries()]
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => b.amount - a.amount);
 }
 
 export function categoryBreakdown(
@@ -46,14 +66,11 @@ export function categoryBreakdown(
   month: number,
   kind: TransactionKind = "expense"
 ): { category: string; amount: number }[] {
-  const inMonth = transactions.filter((t) => isInMonth(t.date, year, month) && t.kind === kind);
-  const byCategory = new Map<string, number>();
-  for (const t of inMonth) {
-    byCategory.set(t.category, (byCategory.get(t.category) ?? 0) + t.amount);
-  }
-  return [...byCategory.entries()]
-    .map(([category, amount]) => ({ category, amount }))
-    .sort((a, b) => b.amount - a.amount);
+  return groupByCategory(transactions.filter((t) => isInMonth(t.date, year, month) && t.kind === kind));
+}
+
+export function spendingBreakdown(transactions: Transaction[], year: number, month: number): { category: string; amount: number }[] {
+  return groupByCategory(transactions.filter((t) => isInMonth(t.date, year, month) && isSpending(t)));
 }
 
 export function monthlyTrend(transactions: Transaction[], year: number, month: number, monthsBack = 6) {
