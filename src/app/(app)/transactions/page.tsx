@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
-import { getUserWallets, getUserTransactions } from "@/lib/queries";
-import { parseFilters, applyFilters } from "@/lib/transactionFilters";
-import { sumBy } from "@/lib/finance";
+import { getUserWallets, getTransactionsPage, getTransactionsSummary } from "@/lib/queries";
+import { parseFilters } from "@/lib/transactionFilters";
 import { formatCurrency } from "@/lib/format";
 import { FilterBar } from "@/components/transactions/FilterBar";
-import { TransactionTable } from "@/components/transactions/TransactionTable";
+import { TransactionList } from "@/components/transactions/TransactionList";
 import { AddTransactionButton } from "@/components/transactions/AddTransactionButton";
 
 export const metadata: Metadata = { title: "Transactions — Exflio" };
@@ -16,18 +15,14 @@ export default async function TransactionsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const user = await requireUser();
-  const [wallets, transactions, rawParams] = await Promise.all([
-    getUserWallets(user.id),
-    getUserTransactions(user.id),
-    searchParams,
-  ]);
-
+  const [wallets, rawParams] = await Promise.all([getUserWallets(user.id), searchParams]);
   const filters = parseFilters(rawParams);
-  const filtered = applyFilters(transactions, filters);
-  const activeWallets = wallets.filter((w) => !w.archived);
 
-  const expenseTotal = sumBy(filtered.filter((t) => t.kind === "expense"), (t) => t.amount);
-  const incomeTotal = sumBy(filtered.filter((t) => t.kind === "income"), (t) => t.amount);
+  const [page, summary] = await Promise.all([
+    getTransactionsPage(user.id, filters, 0),
+    getTransactionsSummary(user.id, filters),
+  ]);
+  const activeWallets = wallets.filter((w) => !w.archived);
 
   return (
     <div className="flex flex-col gap-6">
@@ -43,17 +38,17 @@ export default async function TransactionsPage({
 
       <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[13px] text-text-secondary">
         <span>
-          <span className="font-medium text-text-primary">{filtered.length}</span> result{filtered.length === 1 ? "" : "s"}
+          <span className="font-medium text-text-primary">{summary.count}</span> result{summary.count === 1 ? "" : "s"}
         </span>
         <span>
-          Income <span className="font-medium text-status-good">+{formatCurrency(incomeTotal)}</span>
+          Income <span className="font-medium text-status-good">+{formatCurrency(summary.incomeTotal)}</span>
         </span>
         <span>
-          Expense <span className="font-medium text-status-critical">-{formatCurrency(expenseTotal)}</span>
+          Expense <span className="font-medium text-status-critical">-{formatCurrency(summary.expenseTotal)}</span>
         </span>
       </div>
 
-      <TransactionTable transactions={filtered} wallets={wallets} />
+      <TransactionList initialItems={page.items} initialHasMore={page.hasMore} wallets={wallets} />
     </div>
   );
 }

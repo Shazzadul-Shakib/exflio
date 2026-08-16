@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { PiggyBank } from "lucide-react";
 import { requireUser } from "@/lib/session";
-import { getUserWallets, getUserTransactions } from "@/lib/queries";
-import { parseFilters, applyFilters } from "@/lib/transactionFilters";
+import { getUserWallets, getTransactionsPage } from "@/lib/queries";
+import { parseFilters } from "@/lib/transactionFilters";
 import { totalSavings } from "@/lib/finance";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { WalletCard } from "@/components/wallets/WalletCard";
 import { CreateWalletButton } from "@/components/wallets/CreateWalletButton";
 import { FilterBar } from "@/components/transactions/FilterBar";
-import { TransactionTable } from "@/components/transactions/TransactionTable";
+import { TransactionList } from "@/components/transactions/TransactionList";
 import { AddTransactionButton } from "@/components/transactions/AddTransactionButton";
 import { EmptyState } from "@/components/ui";
 
@@ -20,21 +20,19 @@ export default async function SavingsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const user = await requireUser();
-  const [wallets, transactions, rawParams] = await Promise.all([
-    getUserWallets(user.id),
-    getUserTransactions(user.id),
-    searchParams,
-  ]);
+  const [wallets, rawParams] = await Promise.all([getUserWallets(user.id), searchParams]);
 
   // History includes archived savings wallets too, so their transactions stay
   // visible here even if they later drop off the active list below.
   const allSavingsWallets = wallets.filter((w) => w.type === "savings");
   const savingsWallets = allSavingsWallets.filter((w) => !w.archived);
-  const savingsIds = new Set(allSavingsWallets.map((w) => w.id));
-  const related = transactions.filter((t) => savingsIds.has(t.walletId) || (t.toWalletId && savingsIds.has(t.toWalletId)));
+  const savingsIds = allSavingsWallets.map((w) => w.id);
 
   const filters = parseFilters(rawParams);
-  const filtered = applyFilters(related, filters);
+  const page =
+    savingsIds.length > 0
+      ? await getTransactionsPage(user.id, filters, 0, { walletIds: savingsIds })
+      : { items: [], hasMore: false };
 
   return (
     <div className="flex flex-col gap-6">
@@ -67,7 +65,7 @@ export default async function SavingsPage({
             <AddTransactionButton wallets={wallets.filter((w) => !w.archived)} defaultWalletId={savingsWallets[0]?.id} />
           </div>
           <FilterBar wallets={allSavingsWallets} showWalletFilter />
-          <TransactionTable transactions={filtered} wallets={wallets} />
+          <TransactionList initialItems={page.items} initialHasMore={page.hasMore} wallets={wallets} scopeWalletIds={savingsIds} />
         </>
       )}
 

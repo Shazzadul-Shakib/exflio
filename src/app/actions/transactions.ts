@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/session";
 import { createTransaction, updateTransaction, deleteTransaction, MutationError } from "@/lib/mutations";
+import { getTransactionsPage, type TransactionsPage } from "@/lib/queries";
+import type { TransactionFilters } from "@/lib/transactionFilters";
 import type { TransactionKind } from "@/lib/types";
 
 export interface TransactionFormState {
@@ -81,6 +83,21 @@ export async function updateTransactionAction(
   revalidatePath("/savings");
   revalidatePath("/debts");
   return { success: true };
+}
+
+/**
+ * Fetches one more page of transactions for infinite scroll. `scopeWalletIds`, when given,
+ * restricts results to a wallet-type page's wallets (debts/savings) or a single wallet's history
+ * — but every result is scoped to the caller's own transactions regardless of what's passed here,
+ * since `requireUser` supplies the userId used in the underlying query.
+ */
+export async function loadMoreTransactionsAction(
+  filters: TransactionFilters,
+  page: number,
+  scopeWalletIds?: string[]
+): Promise<TransactionsPage> {
+  const user = await requireUser();
+  return getTransactionsPage(user.id, filters, page, scopeWalletIds ? { walletIds: scopeWalletIds } : undefined);
 }
 
 export async function deleteTransactionAction(transactionId: string): Promise<void> {

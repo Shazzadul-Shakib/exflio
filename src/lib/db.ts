@@ -8,11 +8,22 @@ const RETRY_ATTEMPTS = 4;
 const RETRY_DELAY_MS = 750;
 
 // Connection-level failures worth retrying — nothing has committed yet when
-// these fire, so a retry is always safe.
+// these fire, so a retry is always safe. P2024 is Prisma's own pool-exhaustion
+// error ("Timed out fetching a new connection from the connection pool") — it
+// fires when every pooled connection is briefly busy (e.g. a burst of
+// concurrent queries, or Neon's serverless compute waking from idle), not
+// when the query itself is broken, so it clears up on retry once a slot frees.
 function isTransientError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const code = (error as { code?: string }).code;
-  return code === "ETIMEDOUT" || code === "ECONNRESET" || code === "ECONNREFUSED" || code === "P1001" || code === "P1002";
+  return (
+    code === "ETIMEDOUT" ||
+    code === "ECONNRESET" ||
+    code === "ECONNREFUSED" ||
+    code === "P1001" ||
+    code === "P1002" ||
+    code === "P2024"
+  );
 }
 
 function sleep(ms: number) {

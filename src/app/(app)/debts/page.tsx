@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { CreditCard } from "lucide-react";
 import { requireUser } from "@/lib/session";
-import { getUserWallets, getUserTransactions } from "@/lib/queries";
-import { parseFilters, applyFilters } from "@/lib/transactionFilters";
+import { getUserWallets, getTransactionsPage } from "@/lib/queries";
+import { parseFilters } from "@/lib/transactionFilters";
 import { totalDebt } from "@/lib/finance";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { WalletCard } from "@/components/wallets/WalletCard";
 import { CreateWalletButton } from "@/components/wallets/CreateWalletButton";
 import { FilterBar } from "@/components/transactions/FilterBar";
-import { TransactionTable } from "@/components/transactions/TransactionTable";
+import { TransactionList } from "@/components/transactions/TransactionList";
 import { AddTransactionButton } from "@/components/transactions/AddTransactionButton";
 import { EmptyState } from "@/components/ui";
 
@@ -20,21 +20,19 @@ export default async function DebtsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const user = await requireUser();
-  const [wallets, transactions, rawParams] = await Promise.all([
-    getUserWallets(user.id),
-    getUserTransactions(user.id),
-    searchParams,
-  ]);
+  const [wallets, rawParams] = await Promise.all([getUserWallets(user.id), searchParams]);
 
   // History includes archived (paid-off) debt wallets too, so a cleared debt's
   // transactions stay visible here even after it drops off the active list below.
   const allDebtWallets = wallets.filter((w) => w.type === "debt");
   const debtWallets = allDebtWallets.filter((w) => !w.archived);
-  const debtIds = new Set(allDebtWallets.map((w) => w.id));
-  const related = transactions.filter((t) => debtIds.has(t.walletId) || (t.toWalletId && debtIds.has(t.toWalletId)));
+  const debtIds = allDebtWallets.map((w) => w.id);
 
   const filters = parseFilters(rawParams);
-  const filtered = applyFilters(related, filters);
+  const page =
+    debtIds.length > 0
+      ? await getTransactionsPage(user.id, filters, 0, { walletIds: debtIds })
+      : { items: [], hasMore: false };
 
   return (
     <div className="flex flex-col gap-6">
@@ -67,15 +65,15 @@ export default async function DebtsPage({
             <AddTransactionButton wallets={wallets.filter((w) => !w.archived)} defaultWalletId={debtWallets[0]?.id} />
           </div>
           <FilterBar wallets={allDebtWallets} showWalletFilter />
-          <TransactionTable transactions={filtered} wallets={wallets} />
+          <TransactionList initialItems={page.items} initialHasMore={page.hasMore} wallets={wallets} scopeWalletIds={debtIds} />
         </>
       )}
 
       <p className="text-[12.5px] text-text-muted">
         Tip: an <span className="font-medium text-text-primary">expense</span> on a debt wallet increases what you owe (e.g.
         a credit card purchase); use <span className="font-medium text-text-primary">Clear debt</span> on a wallet&apos;s
-        page to pay it down. Once it&apos;s fully paid off, the wallet moves off this page automatically — its history stays
-        on the Wallets page.
+        page to pay it down. Once it&apos;s fully paid off, the wallet drops off the Wallets page — its history stays
+        visible here.
       </p>
     </div>
   );

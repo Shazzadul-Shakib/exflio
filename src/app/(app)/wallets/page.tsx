@@ -17,6 +17,9 @@ export default async function WalletsPage() {
   const [wallets, transactions] = await Promise.all([getUserWallets(user.id), getUserTransactions(user.id)]);
 
   const countFor = (w: Wallet) => transactions.filter((t) => t.walletId === w.id || t.toWalletId === w.id).length;
+  // Cleared debt wallets are auto-archived once paid off — they no longer belong on this page;
+  // their history is still reachable from the Debts page.
+  const visibleWallets = wallets.filter((w) => !w.archived);
 
   return (
     <div className="flex flex-col gap-6">
@@ -28,11 +31,11 @@ export default async function WalletsPage() {
         <CreateWalletButton wallets={wallets} />
       </div>
 
-      {wallets.length === 0 ? (
+      {visibleWallets.length === 0 ? (
         <EmptyState icon={WalletIcon} title="No wallets yet" description="Create your first wallet to start tracking money." action={<CreateWalletButton label="Create a wallet" wallets={wallets} />} />
       ) : (
         SECTION_ORDER.map((type) => {
-          const group = wallets.filter((w) => w.type === type);
+          const group = visibleWallets.filter((w) => w.type === type);
           if (group.length === 0) return null;
           const Icon = WALLET_TYPE_META[type].icon;
           return (
