@@ -1,15 +1,15 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getCurrentUser, requireUser } from "@/lib/session";
-import { getUserWallets, getWallet, getWalletTransactions } from "@/lib/queries";
+import { getUserWallets, getWallet, getTransactionsPage, getWalletFlowTotals } from "@/lib/queries";
 import { WALLET_TYPE_META } from "@/lib/categories";
 import { formatCurrency } from "@/lib/format";
-import { parseFilters, applyFilters } from "@/lib/transactionFilters";
+import { parseFilters } from "@/lib/transactionFilters";
 import { walletColor } from "@/components/wallets/WalletCard";
 import { WalletDetailActions } from "@/components/wallets/WalletDetailActions";
 import { AddTransactionButton } from "@/components/transactions/AddTransactionButton";
 import { FilterBar } from "@/components/transactions/FilterBar";
-import { TransactionTable } from "@/components/transactions/TransactionTable";
+import { TransactionList } from "@/components/transactions/TransactionList";
 import { Card } from "@/components/ui";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -28,29 +28,23 @@ export default async function WalletDetailPage({
 }) {
   const user = await requireUser();
   const { id } = await params;
-  const [wallet, allWallets, walletTransactions, rawParams] = await Promise.all([
+  const [wallet, allWallets, rawParams] = await Promise.all([
     getWallet(user.id, id),
     getUserWallets(user.id),
-    getWalletTransactions(user.id, id),
     searchParams,
   ]);
 
   if (!wallet) notFound();
 
   const filters = parseFilters(rawParams);
-  const filtered = applyFilters(walletTransactions, filters);
+  const [page, flowTotals] = await Promise.all([
+    getTransactionsPage(user.id, filters, 0, { walletIds: [wallet.id] }),
+    getWalletFlowTotals(user.id, wallet.id),
+  ]);
   const meta = WALLET_TYPE_META[wallet.type];
   const Icon = meta.icon;
   const color = walletColor(wallet);
-
-  const inflow = walletTransactions
-    .filter((t) => t.kind === "income" && t.walletId === wallet.id)
-    .reduce((sum, t) => sum + t.amount, 0) +
-    walletTransactions.filter((t) => t.kind === "transfer" && t.toWalletId === wallet.id).reduce((sum, t) => sum + t.amount, 0);
-  const outflow = walletTransactions
-    .filter((t) => t.kind === "expense" && t.walletId === wallet.id)
-    .reduce((sum, t) => sum + t.amount, 0) +
-    walletTransactions.filter((t) => t.kind === "transfer" && t.walletId === wallet.id).reduce((sum, t) => sum + t.amount, 0);
+  const { inflow, outflow } = flowTotals;
 
   return (
     <div className="flex flex-col gap-6">
@@ -105,7 +99,7 @@ export default async function WalletDetailPage({
       </div>
 
       <FilterBar />
-      <TransactionTable transactions={filtered} wallets={allWallets} />
+      <TransactionList initialItems={page.items} initialHasMore={page.hasMore} wallets={allWallets} scopeWalletIds={[wallet.id]} />
     </div>
   );
 }
