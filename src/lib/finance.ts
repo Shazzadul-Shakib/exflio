@@ -1,4 +1,4 @@
-import type { Transaction, TransactionKind, Wallet, WalletType } from "./types";
+import type { Budget, Transaction, TransactionKind, Wallet, WalletType } from "./types";
 import { shiftYearMonth } from "./format";
 import { DEBT_CATEGORY, SAVINGS_CATEGORY } from "./categories";
 
@@ -110,4 +110,46 @@ export function totalSavings(wallets: Wallet[]): number {
 
 export function netWorth(wallets: Wallet[]): number {
   return totalAssets(wallets) - totalDebt(wallets);
+}
+
+export function budgetsForMonth(budgets: Budget[], year: number, month: number): Budget[] {
+  return budgets.filter((b) => b.year === year && b.month === month);
+}
+
+export interface BudgetProgress {
+  budgetId: string;
+  category: string;
+  budgeted: number;
+  spent: number;
+  remaining: number;
+  /** Spent as a percentage of budgeted, uncapped — a value over 100 means the category is over budget. */
+  pct: number;
+}
+
+/**
+ * Compares each of a month's budgets against actual spend in that category — reuses
+ * `spendingBreakdown` so a budget on "Debt" or "Savings" lines up with the same
+ * transfer-as-spending rule used everywhere else spending is totaled.
+ */
+export function budgetProgress(transactions: Transaction[], budgets: Budget[], year: number, month: number): BudgetProgress[] {
+  const monthBudgets = budgetsForMonth(budgets, year, month);
+  const spendByCategory = new Map(spendingBreakdown(transactions, year, month).map((c) => [c.category, c.amount]));
+
+  return monthBudgets
+    .map((b) => {
+      const spent = spendByCategory.get(b.category) ?? 0;
+      return {
+        budgetId: b.id,
+        category: b.category,
+        budgeted: b.amount,
+        spent,
+        remaining: b.amount - spent,
+        pct: b.amount > 0 ? (spent / b.amount) * 100 : spent > 0 ? 100 : 0,
+      };
+    })
+    .sort((a, b) => b.budgeted - a.budgeted);
+}
+
+export function budgetTotals(rows: BudgetProgress[]): { budgeted: number; spent: number } {
+  return { budgeted: sumBy(rows, (r) => r.budgeted), spent: sumBy(rows, (r) => r.spent) };
 }

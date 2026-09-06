@@ -36,10 +36,22 @@ export interface Transaction {
   createdAt: string;
 }
 
+export interface Budget {
+  id: string;
+  userId: string;
+  category: string;
+  amount: number;
+  year: number;
+  month: number;
+  note: string;
+  createdAt: string;
+}
+
 export interface Database {
   users: User[];
   wallets: Wallet[];
   transactions: Transaction[];
+  budgets: Budget[];
 }
 
 export type PublicUser = Omit<User, "passwordHash" | "passwordSalt">;
