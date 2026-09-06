@@ -1,10 +1,11 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "./db";
-import type { Transaction, Wallet } from "./types";
+import type { Budget, Transaction, Wallet } from "./types";
 import type { SortKey, TransactionFilters } from "./transactionFilters";
 
 type WalletRow = Awaited<ReturnType<typeof prisma.wallet.findFirstOrThrow>>;
 type TransactionRow = Awaited<ReturnType<typeof prisma.transaction.findFirstOrThrow>>;
+type BudgetRow = Awaited<ReturnType<typeof prisma.budget.findFirstOrThrow>>;
 
 function mapWallet(row: WalletRow): Wallet {
   return {
@@ -33,6 +34,27 @@ function mapTransaction(row: TransactionRow): Transaction {
     note: row.note,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+function mapBudget(row: BudgetRow): Budget {
+  return {
+    id: row.id,
+    userId: row.userId,
+    category: row.category,
+    amount: Number(row.amount),
+    year: row.year,
+    month: row.month,
+    note: row.note,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+export async function getUserBudgets(userId: string): Promise<Budget[]> {
+  const rows = await prisma.budget.findMany({
+    where: { userId },
+    orderBy: [{ year: "desc" }, { month: "desc" }, { createdAt: "asc" }],
+  });
+  return rows.map(mapBudget);
 }
 
 export async function getUserWallets(userId: string): Promise<Wallet[]> {

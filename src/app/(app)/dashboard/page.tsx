@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CreditCard, PiggyBank, TrendingDown, Wallet as WalletIcon } from "lucide-react";
+import { CreditCard, PiggyBank, Target, TrendingDown, Wallet as WalletIcon } from "lucide-react";
 import { requireUser } from "@/lib/session";
-import { getUserWallets, getUserTransactions } from "@/lib/queries";
+import { getUserWallets, getUserTransactions, getUserBudgets } from "@/lib/queries";
 import {
   monthlyTotals,
   spendingBreakdown,
@@ -11,6 +11,7 @@ import {
   totalSavings,
   totalDebt,
   walletsByType,
+  budgetProgress,
 } from "@/lib/finance";
 import { currentYearMonth, shiftYearMonth, monthLabel } from "@/lib/format";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -20,6 +21,9 @@ import { MonthYearPicker } from "@/components/dashboard/MonthYearPicker";
 import { AddTransactionButton } from "@/components/transactions/AddTransactionButton";
 import { WalletCard } from "@/components/wallets/WalletCard";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
+import { BudgetTable } from "@/components/budgets/BudgetTable";
+import { BudgetProgressChart } from "@/components/budgets/BudgetProgressChart";
+import { CreateBudgetButton } from "@/components/budgets/CreateBudgetButton";
 import { Card, EmptyState } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Dashboard — Exflio" };
@@ -40,13 +44,18 @@ export default async function DashboardPage({
   const year = Number(params.year) || defaults.year;
   const month = Number(params.month) || defaults.month;
 
-  const [wallets, transactions] = await Promise.all([getUserWallets(user.id), getUserTransactions(user.id)]);
+  const [wallets, transactions, budgets] = await Promise.all([
+    getUserWallets(user.id),
+    getUserTransactions(user.id),
+    getUserBudgets(user.id),
+  ]);
 
   const current = monthlyTotals(transactions, year, month);
   const prevYM = shiftYearMonth(year, month, -1);
   const previous = monthlyTotals(transactions, prevYM.year, prevYM.month);
   const categories = spendingBreakdown(transactions, year, month);
   const trend = monthlyTrend(transactions, year, month, 6);
+  const budgetRows = budgetProgress(transactions, budgets, year, month);
   const recent = [...transactions].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0, 6);
 
   const activeWallets = wallets.filter((w) => !w.archived);
@@ -103,6 +112,35 @@ export default async function DashboardPage({
           </div>
           <CategoryBarChart data={categories} />
         </Card>
+      </div>
+
+      <div>
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <h3 className="text-sm font-semibold text-text-primary">Budget vs. expense</h3>
+            <Link href="/budgets" className="text-[13px] font-medium text-brand hover:underline">
+              View all →
+            </Link>
+          </div>
+          <CreateBudgetButton label="Add budget" budgets={budgets} defaultYear={year} defaultMonth={month} />
+        </div>
+        {budgetRows.length === 0 ? (
+          <EmptyState
+            icon={Target}
+            title="No budgets set for this month"
+            description="Create a budget per category to compare planned spending against what actually goes out."
+            action={<CreateBudgetButton label="Create a budget" budgets={budgets} defaultYear={year} defaultMonth={month} />}
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+            <Card className="p-5 lg:col-span-3">
+              <BudgetTable rows={budgetRows} budgets={budgets} showActions={false} />
+            </Card>
+            <Card className="p-5 lg:col-span-2">
+              <BudgetProgressChart data={budgetRows} />
+            </Card>
+          </div>
+        )}
       </div>
 
       <div>

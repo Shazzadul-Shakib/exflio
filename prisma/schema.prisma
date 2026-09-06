@@ -30,6 +30,7 @@ model User {
 
   wallets      Wallet[]
   transactions Transaction[]
+  budgets      Budget[]
 
   @@map("users")
 }
@@ -72,4 +73,22 @@ model Transaction {
   @@index([walletId])
   @@index([toWalletId])
   @@map("transactions")
+}
+
+/// A spending limit for one category in one calendar month. A user can set several
+/// per month (one per category) — uniqueness is per (user, year, month, category).
+model Budget {
+  id        String   @id
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  String
+  amount    Decimal  @db.Decimal(14, 2)
+  year      Int
+  month     Int
+  note      String   @default("")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, year, month, category])
+  @@index([userId, year, month])
+  @@map("budgets")
 }

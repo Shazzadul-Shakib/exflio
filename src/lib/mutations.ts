@@ -2,7 +2,7 @@ import { prisma } from "./db";
 import { newId } from "./id";
 import { walletDelta } from "./finance";
 import { TRANSFER_CATEGORY, SAVINGS_CATEGORY, DEBT_CATEGORY } from "./categories";
-import type { Transaction, TransactionKind, Wallet, WalletType } from "./types";
+import type { Budget, Transaction, TransactionKind, Wallet, WalletType } from "./types";
 import type { Prisma } from "@prisma/client";
 
 export class MutationError extends Error {}
@@ -322,6 +322,88 @@ export async function updateTransaction(
     });
     return mapTransaction(updated);
   });
+}
+
+function mapBudget(row: {
+  id: string;
+  userId: string;
+  category: string;
+  amount: Prisma.Decimal;
+  year: number;
+  month: number;
+  note: string;
+  createdAt: Date;
+}): Budget {
+  return {
+    id: row.id,
+    userId: row.userId,
+    category: row.category,
+    amount: Number(row.amount),
+    year: row.year,
+    month: row.month,
+    note: row.note,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+export interface BudgetInput {
+  category: string;
+  amount: number;
+  year: number;
+  month: number;
+  note: string;
+}
+
+export async function createBudget(userId: string, input: BudgetInput): Promise<Budget> {
+  const existing = await prisma.budget.findUnique({
+    where: { userId_year_month_category: { userId, year: input.year, month: input.month, category: input.category } },
+  });
+  if (existing) {
+    throw new MutationError(`A budget for ${input.category} already exists for that month — edit it instead.`);
+  }
+
+  const row = await prisma.budget.create({
+    data: {
+      id: newId("bud"),
+      userId,
+      category: input.category,
+      amount: input.amount,
+      year: input.year,
+      month: input.month,
+      note: input.note,
+    },
+  });
+  return mapBudget(row);
+}
+
+export async function updateBudget(userId: string, budgetId: string, input: BudgetInput): Promise<Budget> {
+  const existing = await prisma.budget.findFirst({ where: { id: budgetId, userId } });
+  if (!existing) throw new MutationError("Budget not found");
+
+  const clash = await prisma.budget.findFirst({
+    where: { userId, year: input.year, month: input.month, category: input.category, NOT: { id: budgetId } },
+  });
+  if (clash) {
+    throw new MutationError(`A budget for ${input.category} already exists for that month.`);
+  }
+
+  const row = await prisma.budget.update({
+    where: { id: budgetId },
+    data: {
+      category: input.category,
+      amount: input.amount,
+      year: input.year,
+      month: input.month,
+      note: input.note,
+    },
+  });
+  return mapBudget(row);
+}
+
+export async function deleteBudget(userId: string, budgetId: string): Promise<void> {
+  const existing = await prisma.budget.findFirst({ where: { id: budgetId, userId } });
+  if (!existing) throw new MutationError("Budget not found");
+  await prisma.budget.delete({ where: { id: budgetId } });
 }
 
 export async function deleteTransaction(userId: string, transactionId: string): Promise<void> {
