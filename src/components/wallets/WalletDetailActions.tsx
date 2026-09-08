@@ -198,8 +198,11 @@ export function WalletDetailActions({ wallet, wallets }: { wallet: Wallet; walle
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  const isEmpty = wallet.balance === 0;
 
   return (
     <div className="flex items-center gap-2">
@@ -216,7 +219,10 @@ export function WalletDetailActions({ wallet, wallets }: { wallet: Wallet; walle
       <Button
         variant="outline"
         size="sm"
-        onClick={() => setConfirmOpen(true)}
+        onClick={() => {
+          setDeleteError(null);
+          setConfirmOpen(true);
+        }}
         className="hover:bg-status-critical-soft! hover:text-status-critical!"
       >
         <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
@@ -240,12 +246,34 @@ export function WalletDetailActions({ wallet, wallets }: { wallet: Wallet; walle
         onClose={() => setConfirmOpen(false)}
         title="Delete wallet"
       >
-        <p className="text-sm text-text-secondary">
-          Deleting{" "}
-          <span className="font-medium text-text-primary">{wallet.name}</span>{" "}
-          also removes every transaction linked to it. This can&apos;t be
-          undone.
-        </p>
+        {isEmpty ? (
+          <p className="text-sm text-text-secondary">
+            This removes{" "}
+            <span className="font-medium text-text-primary">{wallet.name}</span>{" "}
+            from your wallet lists and pickers. Its transaction history stays in
+            place — every past transaction still shows up on the Transactions
+            page and in your totals.
+          </p>
+        ) : (
+          <p className="text-sm text-text-secondary">
+            <span className="font-medium text-text-primary">{wallet.name}</span>{" "}
+            still holds{" "}
+            <span className="font-medium text-text-primary">
+              {formatCurrency(wallet.balance, wallet.currency)}
+            </span>
+            . {wallet.type === "debt" ? "Pay it off to zero" : "Move or withdraw the balance"}{" "}
+            first — only an empty wallet can be deleted.
+          </p>
+        )}
+        {deleteError && (
+          <p
+            role="alert"
+            className="mt-3 flex items-start gap-2 rounded-lg bg-status-critical-soft px-3 py-2 text-[13px] text-status-critical"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+            {deleteError}
+          </p>
+        )}
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)}>
             Cancel
@@ -254,9 +282,15 @@ export function WalletDetailActions({ wallet, wallets }: { wallet: Wallet; walle
             variant="danger"
             size="sm"
             loading={isPending}
+            disabled={!isEmpty}
             onClick={() => {
+              setDeleteError(null);
               startTransition(async () => {
-                await deleteWalletAction(wallet.id);
+                const result = await deleteWalletAction(wallet.id);
+                if (result?.error) {
+                  setDeleteError(result.error);
+                  return;
+                }
                 router.push("/wallets");
               });
             }}

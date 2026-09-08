@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/session";
 import { getUserWallets, getUserTransactions, getUserBudgets } from "@/lib/queries";
 import {
   monthlyTotals,
+  monthlySavingsContribution,
   spendingBreakdown,
   monthlyTrend,
   netWorth,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/finance";
 import { currentYearMonth, shiftYearMonth, monthLabel } from "@/lib/format";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { ToggleStatCard } from "@/components/dashboard/ToggleStatCard";
 import { CategoryBarChart } from "@/components/dashboard/CategoryBarChart";
 import { TrendChart } from "@/components/dashboard/TrendChart";
 import { MonthYearPicker } from "@/components/dashboard/MonthYearPicker";
@@ -44,15 +46,20 @@ export default async function DashboardPage({
   const year = Number(params.year) || defaults.year;
   const month = Number(params.month) || defaults.month;
 
-  const [wallets, transactions, budgets] = await Promise.all([
-    getUserWallets(user.id),
+  const [walletsWithDeleted, transactions, budgets] = await Promise.all([
+    getUserWallets(user.id, { includeDeleted: true }),
     getUserTransactions(user.id),
     getUserBudgets(user.id),
   ]);
+  // Soft-deleted wallets are kept only to resolve names for historical
+  // transactions in the "Recent" list — never for totals, pickers, or previews.
+  const wallets = walletsWithDeleted.filter((w) => !w.deletedAt);
 
   const current = monthlyTotals(transactions, year, month);
   const prevYM = shiftYearMonth(year, month, -1);
   const previous = monthlyTotals(transactions, prevYM.year, prevYM.month);
+  const savingsThisMonth = monthlySavingsContribution(transactions, year, month);
+  const prevSavingsThisMonth = monthlySavingsContribution(transactions, prevYM.year, prevYM.month);
   const categories = spendingBreakdown(transactions, year, month);
   const trend = monthlyTrend(transactions, year, month, 6);
   const budgetRows = budgetProgress(transactions, budgets, year, month);
@@ -82,15 +89,49 @@ export default async function DashboardPage({
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Net worth" value={netWorth(wallets)} icon={WalletIcon} accent="brand" hint="Assets minus debt" />
-        <StatCard
-          label="Expenses this month"
-          value={current.expense}
+        <ToggleStatCard
           icon={TrendingDown}
           accent="critical"
-          delta={pct(current.expense, previous.expense)}
-          deltaGoodDirection="down"
+          views={[
+            {
+              key: "all",
+              toggle: "All",
+              label: "Expenses this month",
+              value: current.expense,
+              delta: pct(current.expense, previous.expense),
+              deltaGoodDirection: "down",
+            },
+            {
+              key: "excl-savings",
+              toggle: "Excl. savings",
+              label: "Expenses excl. savings",
+              value: current.expense - savingsThisMonth,
+              delta: pct(current.expense - savingsThisMonth, previous.expense - prevSavingsThisMonth),
+              deltaGoodDirection: "down",
+            },
+          ]}
         />
-        <StatCard label="Total savings" value={totalSavings(wallets)} icon={PiggyBank} accent="good" hint={`${savingsWallets.length} wallet${savingsWallets.length === 1 ? "" : "s"}`} />
+        <ToggleStatCard
+          icon={PiggyBank}
+          accent="good"
+          views={[
+            {
+              key: "total",
+              toggle: "Total",
+              label: "Total savings",
+              value: totalSavings(wallets),
+              hint: `${savingsWallets.length} wallet${savingsWallets.length === 1 ? "" : "s"}`,
+            },
+            {
+              key: "this-month",
+              toggle: "This month",
+              label: "Saved this month",
+              value: savingsThisMonth,
+              delta: pct(savingsThisMonth, prevSavingsThisMonth),
+              deltaGoodDirection: "up",
+            },
+          ]}
+        />
         <StatCard label="Total debt" value={totalDebt(wallets)} icon={CreditCard} accent="critical" hint={`${debtWallets.length} wallet${debtWallets.length === 1 ? "" : "s"}`} />
       </div>
 
@@ -168,7 +209,7 @@ export default async function DashboardPage({
             View all →
           </Link>
         </div>
-        <TransactionTable transactions={recent} wallets={wallets} />
+        <TransactionTable transactions={recent} wallets={walletsWithDeleted} />
       </div>
     </div>
   );

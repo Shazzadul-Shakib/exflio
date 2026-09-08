@@ -93,16 +93,17 @@ export async function updateWalletAction(
   return { success: true };
 }
 
-export async function deleteWalletAction(walletId: string): Promise<void> {
+export async function deleteWalletAction(walletId: string): Promise<{ error?: string }> {
   const user = await requireUser();
   try {
     await deleteWallet(user.id, walletId);
-  } catch {
-    // Already gone — nothing to do.
+  } catch (error) {
+    return { error: error instanceof MutationError ? error.message : "Could not delete this wallet." };
   }
   revalidatePath("/wallets");
   revalidatePath("/dashboard");
   revalidatePath("/transactions");
   revalidatePath("/savings");
   revalidatePath("/debts");
+  return {};
 }

@@ -52,12 +52,21 @@ function KindBadge({ kind }: { kind: Transaction["kind"] }) {
   );
 }
 
+/** Optional row-selection wiring — supplied by `TransactionList`; omitted everywhere the table is read-only. */
+export interface TransactionSelection {
+  selectedIds: Set<string>;
+  onToggleRow: (id: string) => void;
+  onToggleAll: (checked: boolean) => void;
+}
+
 export function TransactionTable({
   transactions,
   wallets,
+  selection,
 }: {
   transactions: Transaction[];
   wallets: Wallet[];
+  selection?: TransactionSelection;
 }) {
   if (transactions.length === 0) {
     return (
@@ -69,11 +78,31 @@ export function TransactionTable({
     );
   }
 
+  const selectedCount = selection
+    ? transactions.filter((t) => selection.selectedIds.has(t.id)).length
+    : 0;
+  const allSelected = selectedCount === transactions.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-surface">
       <table className="w-full min-w-180 border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-left text-[12px] uppercase tracking-wide text-text-muted">
+            {selection && (
+              <th className="px-4 py-3">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 cursor-pointer accent-brand align-middle"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected;
+                  }}
+                  onChange={(e) => selection.onToggleAll(e.target.checked)}
+                  aria-label="Select all loaded transactions"
+                />
+              </th>
+            )}
             <th className="px-4 py-3 font-medium">Date</th>
             <th className="px-4 py-3 font-medium">Description</th>
             <th className="px-4 py-3 font-medium">Category</th>
@@ -86,11 +115,25 @@ export function TransactionTable({
         <tbody>
           {transactions.map((t) => {
             const CategoryIcon = categoryIcon(t.category);
+            const isSelected = selection?.selectedIds.has(t.id) ?? false;
             return (
               <tr
                 key={t.id}
-                className="border-b border-border last:border-0 hover:bg-surface-2/60"
+                className={`border-b border-border last:border-0 hover:bg-surface-2/60 ${
+                  isSelected ? "bg-brand-soft/40" : ""
+                }`}
               >
+                {selection && (
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 cursor-pointer accent-brand align-middle"
+                      checked={isSelected}
+                      onChange={() => selection.onToggleRow(t.id)}
+                      aria-label={`Select transaction${t.note ? ` ${t.note}` : ""}`}
+                    />
+                  </td>
+                )}
                 <td className="whitespace-nowrap px-4 py-3 text-text-secondary">
                   {formatDate(t.date)}
                 </td>

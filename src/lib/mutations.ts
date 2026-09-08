@@ -20,6 +20,7 @@ function mapWallet(row: {
   currency: string;
   note: string;
   archived: boolean;
+  deletedAt: Date | null;
   createdAt: Date;
 }): Wallet {
   return {
@@ -31,6 +32,7 @@ function mapWallet(row: {
     currency: row.currency,
     note: row.note,
     archived: row.archived,
+    deletedAt: row.deletedAt ? row.deletedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -160,12 +162,24 @@ export async function updateWallet(
   return mapWallet(row);
 }
 
+/**
+ * Soft delete. The wallet row and every transaction that references it stay in
+ * the database — history is untouched — but a `deletedAt` timestamp drops the
+ * wallet out of every list, picker, and total (see `getUserWallets`). Only an
+ * empty wallet can be deleted: a non-zero balance would otherwise vanish from
+ * net worth / totals with no offsetting transaction to explain it.
+ */
 export async function deleteWallet(userId: string, walletId: string): Promise<void> {
-  const existing = await prisma.wallet.findFirst({ where: { id: walletId, userId } });
+  const existing = await prisma.wallet.findFirst({ where: { id: walletId, userId, deletedAt: null } });
   if (!existing) throw new MutationError("Wallet not found");
-  // Transactions referencing this wallet (as source or destination) cascade-delete
-  // at the database level via the FK constraints in prisma/schema.prisma.
-  await prisma.wallet.delete({ where: { id: walletId } });
+  if (Number(existing.balance) !== 0) {
+    throw new MutationError(
+      existing.type === "debt"
+        ? "Pay this debt off to zero before deleting it."
+        : "Move or withdraw the remaining balance before deleting this wallet."
+    );
+  }
+  await prisma.wallet.update({ where: { id: walletId }, data: { deletedAt: new Date() } });
 }
 
 export interface TransactionInput {

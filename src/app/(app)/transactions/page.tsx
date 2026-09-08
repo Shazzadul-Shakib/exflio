@@ -15,14 +15,19 @@ export default async function TransactionsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const user = await requireUser();
-  const [wallets, rawParams] = await Promise.all([getUserWallets(user.id), searchParams]);
+  const [walletsWithDeleted, rawParams] = await Promise.all([
+    getUserWallets(user.id, { includeDeleted: true }),
+    searchParams,
+  ]);
   const filters = parseFilters(rawParams);
 
   const [page, summary] = await Promise.all([
     getTransactionsPage(user.id, filters, 0),
     getTransactionsSummary(user.id, filters),
   ]);
-  const activeWallets = wallets.filter((w) => !w.archived);
+  // Deleted wallets are carried through only so their name still renders on
+  // past transactions; they're kept out of pickers and the wallet filter.
+  const activeWallets = walletsWithDeleted.filter((w) => !w.archived && !w.deletedAt);
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,7 +53,7 @@ export default async function TransactionsPage({
         </span>
       </div>
 
-      <TransactionList initialItems={page.items} initialHasMore={page.hasMore} wallets={wallets} />
+      <TransactionList initialItems={page.items} initialHasMore={page.hasMore} wallets={walletsWithDeleted} />
     </div>
   );
 }
