@@ -20,6 +20,9 @@ export interface Wallet {
   currency: string;
   note: string;
   archived: boolean;
+  /** ISO timestamp of a soft delete, or null. A deleted wallet keeps its row and
+   *  transactions but is filtered out of every list, picker, and total. */
+  deletedAt: string | null;
   createdAt: string;
 }
 

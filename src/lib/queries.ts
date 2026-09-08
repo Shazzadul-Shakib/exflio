@@ -17,6 +17,7 @@ function mapWallet(row: WalletRow): Wallet {
     currency: row.currency,
     note: row.note,
     archived: row.archived,
+    deletedAt: row.deletedAt ? row.deletedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -57,13 +58,25 @@ export async function getUserBudgets(userId: string): Promise<Budget[]> {
   return rows.map(mapBudget);
 }
 
-export async function getUserWallets(userId: string): Promise<Wallet[]> {
-  const rows = await prisma.wallet.findMany({ where: { userId }, orderBy: { createdAt: "asc" } });
+/**
+ * A user's wallets, oldest first. Soft-deleted wallets are excluded unless
+ * `includeDeleted` is set — pass it only where a wallet name still has to be
+ * resolved for historical transactions (the global Transactions ledger and the
+ * dashboard's recent list), never for pickers or totals.
+ */
+export async function getUserWallets(
+  userId: string,
+  { includeDeleted = false }: { includeDeleted?: boolean } = {}
+): Promise<Wallet[]> {
+  const rows = await prisma.wallet.findMany({
+    where: { userId, ...(includeDeleted ? {} : { deletedAt: null }) },
+    orderBy: { createdAt: "asc" },
+  });
   return rows.map(mapWallet);
 }
 
 export async function getWallet(userId: string, walletId: string): Promise<Wallet | null> {
-  const row = await prisma.wallet.findFirst({ where: { id: walletId, userId } });
+  const row = await prisma.wallet.findFirst({ where: { id: walletId, userId, deletedAt: null } });
   return row ? mapWallet(row) : null;
 }
 

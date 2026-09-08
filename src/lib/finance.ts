@@ -50,6 +50,21 @@ export function monthlyTotals(transactions: Transaction[], year: number, month: 
   return { expense, income, net: income - expense, count: inMonth.length };
 }
 
+/**
+ * Money moved into savings wallets during a calendar month — the savings-tagged
+ * transfers that `monthlyTotals().expense` also counts as spending. Subtract it
+ * from that total to get "expenses without savings"; on its own it's the
+ * month's savings contribution.
+ */
+export function monthlySavingsContribution(transactions: Transaction[], year: number, month: number): number {
+  return sumBy(
+    transactions.filter(
+      (t) => isInMonth(t.date, year, month) && t.kind === "transfer" && t.category === SAVINGS_CATEGORY
+    ),
+    (t) => t.amount
+  );
+}
+
 function groupByCategory(transactions: Transaction[]): { category: string; amount: number }[] {
   const byCategory = new Map<string, number>();
   for (const t of transactions) {
