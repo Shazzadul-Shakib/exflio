@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowDown, ArrowUp, type LucideIcon } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { cx } from "@/components/cx";
 import { formatCompactCurrency } from "@/lib/format";
 
@@ -32,11 +32,12 @@ export interface StatView {
  * total or just this month's contribution.
  */
 export function ToggleStatCard({
-  icon: Icon,
+  icon,
   accent = "neutral",
   views,
 }: {
-  icon: LucideIcon;
+  /** A rendered icon element — components can't cross the server/client boundary as props, so pass `<Icon />`, not `Icon`. */
+  icon: ReactNode;
   accent?: keyof typeof accentStyles;
   views: StatView[];
 }) {
@@ -62,7 +63,7 @@ export function ToggleStatCard({
             accentStyles[accent],
           )}
         >
-          <Icon className="h-4 w-4" strokeWidth={2} />
+          {icon}
         </span>
       </div>
       <div className="flex items-baseline gap-2">

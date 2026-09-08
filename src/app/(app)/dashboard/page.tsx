@@ -90,7 +90,7 @@ export default async function DashboardPage({
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Net worth" value={netWorth(wallets)} icon={WalletIcon} accent="brand" hint="Assets minus debt" />
         <ToggleStatCard
-          icon={TrendingDown}
+          icon={<TrendingDown className="h-4 w-4" strokeWidth={2} />}
           accent="critical"
           views={[
             {
@@ -112,7 +112,7 @@ export default async function DashboardPage({
           ]}
         />
         <ToggleStatCard
-          icon={PiggyBank}
+          icon={<PiggyBank className="h-4 w-4" strokeWidth={2} />}
           accent="good"
           views={[
             {
