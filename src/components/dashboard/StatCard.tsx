@@ -16,6 +16,8 @@ export function StatCard({
   accent = "neutral",
   delta,
   deltaGoodDirection = "up",
+  /** Trailing text after the delta percentage. Defaults to the dashboard's month-over-month wording. */
+  deltaLabel = "vs last month",
   hint,
 }: {
   label: string;
@@ -24,6 +26,7 @@ export function StatCard({
   accent?: keyof typeof accentStyles;
   delta?: number;
   deltaGoodDirection?: "up" | "down";
+  deltaLabel?: string;
   hint?: string;
 }) {
   const hasDelta =
@@ -66,7 +69,7 @@ export function StatCard({
           ) : (
             <ArrowDown className="h-3 w-3" strokeWidth={2.5} />
           )}
-          {Math.abs(delta!).toFixed(0)}% vs last month
+          {Math.abs(delta!).toFixed(0)}% {deltaLabel}
         </span>
       ) : hint ? (
         <span className="text-[12.5px] text-text-muted">{hint}</span>

@@ -5,15 +5,30 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Dropdown } from "@/components/Dropdown";
 import { MONTH_NAMES, shiftYearMonth } from "@/lib/format";
 
-export function MonthYearPicker({ year, month }: { year: number; month: number }) {
+export function MonthYearPicker({
+  year,
+  month,
+  yearKey = "year",
+  monthKey = "month",
+  ariaPrefix = "",
+}: {
+  year: number;
+  month: number;
+  /** Query-string key the selected year is written to — override to run a second, independent picker on the same page. */
+  yearKey?: string;
+  /** Query-string key the selected month is written to. */
+  monthKey?: string;
+  /** Prefixed onto the prev/next button labels so screen readers can tell two pickers apart. */
+  ariaPrefix?: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   function go(y: number, m: number) {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("year", String(y));
-    params.set("month", String(m));
+    params.set(yearKey, String(y));
+    params.set(monthKey, String(m));
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
@@ -21,6 +36,7 @@ export function MonthYearPicker({ year, month }: { year: number; month: number }
   const next = shiftYearMonth(year, month, 1);
   const nowYear = new Date().getFullYear();
   const years = Array.from({ length: 7 }, (_, i) => nowYear - 5 + i);
+  const label = (suffix: string) => `${ariaPrefix}${ariaPrefix ? " " : ""}${suffix}`;
 
   return (
     <div className="flex items-center gap-1.5 rounded-lg border border-border bg-surface p-1">
@@ -28,7 +44,7 @@ export function MonthYearPicker({ year, month }: { year: number; month: number }
         type="button"
         onClick={() => go(prev.year, prev.month)}
         className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-surface-2"
-        aria-label="Previous month"
+        aria-label={label("Previous month")}
       >
         <ChevronLeft className="h-4 w-4" strokeWidth={2} />
       </button>
@@ -36,7 +52,7 @@ export function MonthYearPicker({ year, month }: { year: number; month: number }
         variant="ghost"
         value={month}
         onChange={(e) => go(year, Number(e.target.value))}
-        aria-label="Month"
+        aria-label={label("Month")}
       >
         {MONTH_NAMES.map((name, i) => (
           <option key={name} value={i + 1}>
@@ -48,7 +64,7 @@ export function MonthYearPicker({ year, month }: { year: number; month: number }
         variant="ghost"
         value={year}
         onChange={(e) => go(Number(e.target.value), month)}
-        aria-label="Year"
+        aria-label={label("Year")}
       >
         {years.map((y) => (
           <option key={y} value={y}>
@@ -60,7 +76,7 @@ export function MonthYearPicker({ year, month }: { year: number; month: number }
         type="button"
         onClick={() => go(next.year, next.month)}
         className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-surface-2"
-        aria-label="Next month"
+        aria-label={label("Next month")}
       >
         <ChevronRight className="h-4 w-4" strokeWidth={2} />
       </button>

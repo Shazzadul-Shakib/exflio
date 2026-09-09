@@ -168,3 +168,44 @@ export function budgetProgress(transactions: Transaction[], budgets: Budget[], y
 export function budgetTotals(rows: BudgetProgress[]): { budgeted: number; spent: number } {
   return { budgeted: sumBy(rows, (r) => r.budgeted), spent: sumBy(rows, (r) => r.spent) };
 }
+
+export interface BudgetComparisonRow {
+  category: string;
+  /** This category's progress in the base month, or null when it wasn't budgeted then. */
+  base: BudgetProgress | null;
+  /** This category's progress in the month being compared against, or null when it wasn't budgeted then. */
+  compare: BudgetProgress | null;
+  /** base.budgeted − compare.budgeted (a missing side counts as 0). */
+  budgetedDelta: number;
+  /** base.spent − compare.spent (a missing side counts as 0). */
+  spentDelta: number;
+}
+
+/**
+ * Lines up two months' budget rows by category so the page can show them side by
+ * side. A category appears on a row when either month budgeted for it; the other
+ * side is null. Rows are ordered by the larger of the two budgeted amounts.
+ */
+export function compareBudgetProgress(base: BudgetProgress[], compare: BudgetProgress[]): BudgetComparisonRow[] {
+  const byCategory = new Map<string, { base: BudgetProgress | null; compare: BudgetProgress | null }>();
+  for (const row of base) byCategory.set(row.category, { base: row, compare: null });
+  for (const row of compare) {
+    const entry = byCategory.get(row.category);
+    if (entry) entry.compare = row;
+    else byCategory.set(row.category, { base: null, compare: row });
+  }
+
+  return [...byCategory.entries()]
+    .map(([category, { base: b, compare: c }]) => ({
+      category,
+      base: b,
+      compare: c,
+      budgetedDelta: (b?.budgeted ?? 0) - (c?.budgeted ?? 0),
+      spentDelta: (b?.spent ?? 0) - (c?.spent ?? 0),
+    }))
+    .sort((a, b) => {
+      const aMax = Math.max(a.base?.budgeted ?? 0, a.compare?.budgeted ?? 0);
+      const bMax = Math.max(b.base?.budgeted ?? 0, b.compare?.budgeted ?? 0);
+      return bMax - aMax;
+    });
+}
