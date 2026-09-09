@@ -48,9 +48,8 @@ export default async function BudgetsPage({
   const compareYear = Number(params.cy) || prevYM.year;
   const compareMonth = Number(params.cm) || prevYM.month;
 
-  const hidden = typeof params.hide === "string" && params.hide.length > 0 ? params.hide.split(",") : [];
-  const hiddenSet = new Set(hidden);
-  const visible = (rows: BudgetProgress[]) => rows.filter((r) => !hiddenSet.has(r.category));
+  const excluded = typeof params.hide === "string" ? params.hide : "";
+  const visible = (rows: BudgetProgress[]) => (excluded ? rows.filter((r) => r.category !== excluded) : rows);
 
   const [budgets, transactions] = await Promise.all([getUserBudgets(user.id), getUserTransactions(user.id)]);
 
@@ -66,16 +65,16 @@ export default async function BudgetsPage({
   const compareRemaining = compareTotals.budgeted - compareTotals.spent;
   const comparisonRows = compare ? compareBudgetProgress(rows, compareRows) : [];
 
-  const filterCategories = Array.from(
-    new Set([...allBaseRows, ...allCompareRows].map((r) => r.category)),
-  ).sort(byCategoryOrder);
+  const budgetedCategories = new Set([...allBaseRows, ...allCompareRows].map((r) => r.category));
+  if (excluded) budgetedCategories.add(excluded); // keep it selectable even after switching months
+  const filterCategories = [...budgetedCategories].sort(byCategoryOrder);
 
   const baseLabel = `${monthLabel(month)} ${year}`;
   const compareLabel = `${monthLabel(compareMonth)} ${compareYear}`;
   const compareShort = `${monthLabel(compareMonth).slice(0, 3)} ${compareYear}`;
   const hiddenNote =
-    allBaseRows.length > 0 && rows.length === 0
-      ? "Every budgeted category is hidden — turn some back on in the category filter."
+    excluded && allBaseRows.length > 0 && rows.length === 0
+      ? `${excluded} is the only budgeted category — switch the filter back to "All categories" to see it.`
       : null;
 
   return (
@@ -96,7 +95,7 @@ export default async function BudgetsPage({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-3">
           <CompareToggle active={compare} baseYear={year} baseMonth={month} />
           {compare && (
             <div className="flex items-center gap-2">
@@ -116,9 +115,7 @@ export default async function BudgetsPage({
               />
             </div>
           )}
-          <div className="ml-auto">
-            <CategoryFilter categories={filterCategories} hidden={hidden} />
-          </div>
+          <CategoryFilter categories={filterCategories} className="w-full sm:ml-auto sm:w-52" />
         </div>
       </div>
 
