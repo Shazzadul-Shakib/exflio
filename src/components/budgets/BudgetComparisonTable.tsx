@@ -3,6 +3,7 @@ import { EmptyState, cx } from "@/components/ui";
 import { categoryIcon, categorySlot } from "@/lib/categories";
 import { formatCurrency } from "@/lib/format";
 import type { BudgetComparisonRow } from "@/lib/finance";
+import type { BudgetSelection } from "./BudgetTable";
 
 /** A right-aligned money cell. Renders a muted dash when the month had no budget for the category. */
 function Money({ value, over, divider }: { value?: number; over?: boolean; divider?: boolean }) {
@@ -35,28 +36,38 @@ export function BudgetComparisonTable({
   rows,
   baseLabel,
   compareLabel,
+  selection,
 }: {
   rows: BudgetComparisonRow[];
   baseLabel: string;
   compareLabel: string;
+  selection?: BudgetSelection;
 }) {
   if (rows.length === 0) {
     return (
       <EmptyState
         icon={Target}
         title="Nothing to compare"
-        description={`Neither ${baseLabel} nor ${compareLabel} has a budget for the selected categories.`}
+        description={`Neither ${baseLabel} nor ${compareLabel} has a budget yet.`}
       />
     );
   }
 
+  const included = (category: string) => (selection ? selection.selected.has(category) : true);
+  const selectedCount = selection ? rows.filter((r) => included(r.category)).length : 0;
+  const allSelected = selectedCount === rows.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+
   const totals = rows.reduce(
-    (acc, r) => ({
-      baseBudgeted: acc.baseBudgeted + (r.base?.budgeted ?? 0),
-      baseSpent: acc.baseSpent + (r.base?.spent ?? 0),
-      compareBudgeted: acc.compareBudgeted + (r.compare?.budgeted ?? 0),
-      compareSpent: acc.compareSpent + (r.compare?.spent ?? 0),
-    }),
+    (acc, r) => {
+      if (!included(r.category)) return acc;
+      return {
+        baseBudgeted: acc.baseBudgeted + (r.base?.budgeted ?? 0),
+        baseSpent: acc.baseSpent + (r.base?.spent ?? 0),
+        compareBudgeted: acc.compareBudgeted + (r.compare?.budgeted ?? 0),
+        compareSpent: acc.compareSpent + (r.compare?.spent ?? 0),
+      };
+    },
     { baseBudgeted: 0, baseSpent: 0, compareBudgeted: 0, compareSpent: 0 },
   );
 
@@ -65,6 +76,20 @@ export function BudgetComparisonTable({
       <table className="w-full min-w-180 border-collapse text-sm">
         <thead>
           <tr className="text-left text-[12px] uppercase tracking-wide text-text-muted">
+            {selection && (
+              <th rowSpan={2} className="border-b border-border px-4 py-3 align-bottom">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 cursor-pointer accent-brand align-middle"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected;
+                  }}
+                  onChange={(e) => selection.onToggleAll(e.target.checked)}
+                  aria-label="Count every category toward the totals"
+                />
+              </th>
+            )}
             <th rowSpan={2} className="border-b border-border px-4 py-3 align-bottom font-medium">
               Category
             </th>
@@ -88,8 +113,26 @@ export function BudgetComparisonTable({
         <tbody>
           {rows.map((row) => {
             const CategoryIcon = categoryIcon(row.category);
+            const isIn = included(row.category);
             return (
-              <tr key={row.category} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+              <tr
+                key={row.category}
+                className={cx(
+                  "border-b border-border last:border-0 hover:bg-surface-2/60",
+                  !isIn && "opacity-45",
+                )}
+              >
+                {selection && (
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 cursor-pointer accent-brand align-middle"
+                      checked={isIn}
+                      onChange={() => selection.onToggleRow(row.category)}
+                      aria-label={`Count ${row.category} toward the totals`}
+                    />
+                  </td>
+                )}
                 <td className="whitespace-nowrap px-4 py-3">
                   <span className="inline-flex items-center gap-1.5 text-text-secondary">
                     <span
@@ -113,6 +156,7 @@ export function BudgetComparisonTable({
         </tbody>
         <tfoot>
           <tr className="border-t-2 border-border font-medium text-text-primary">
+            {selection && <td className="px-4 py-3" />}
             <td className="px-4 py-3">Total</td>
             <td className="border-l border-border px-4 py-3 text-right tabular-nums">
               {formatCurrency(totals.baseBudgeted)}

@@ -6,14 +6,27 @@ import { formatCurrency } from "@/lib/format";
 import type { BudgetProgress } from "@/lib/finance";
 import type { Budget } from "@/lib/types";
 
+/**
+ * Optional inline category selection — supplied by `BudgetResults`. Checked rows count
+ * toward the page's totals; unchecked rows drop out. Mirrors `TransactionSelection`.
+ */
+export interface BudgetSelection {
+  /** Category names currently counted toward the totals. */
+  selected: Set<string>;
+  onToggleRow: (category: string) => void;
+  onToggleAll: (checked: boolean) => void;
+}
+
 export function BudgetTable({
   rows,
   budgets,
   showActions = true,
+  selection,
 }: {
   rows: BudgetProgress[];
   budgets: Budget[];
   showActions?: boolean;
+  selection?: BudgetSelection;
 }) {
   if (rows.length === 0) {
     return (
@@ -25,11 +38,29 @@ export function BudgetTable({
     );
   }
 
+  const selectedCount = selection ? rows.filter((r) => selection.selected.has(r.category)).length : 0;
+  const allSelected = selectedCount === rows.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-surface">
       <table className="w-full min-w-140 border-collapse text-sm">
         <thead>
           <tr className="border-b border-border text-left text-[12px] uppercase tracking-wide text-text-muted">
+            {selection && (
+              <th className="px-4 py-3">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 cursor-pointer accent-brand align-middle"
+                  checked={allSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someSelected;
+                  }}
+                  onChange={(e) => selection.onToggleAll(e.target.checked)}
+                  aria-label="Count every category toward the totals"
+                />
+              </th>
+            )}
             <th className="px-4 py-3 font-medium">Category</th>
             <th className="px-4 py-3 text-right font-medium">Budgeted</th>
             <th className="px-4 py-3 text-right font-medium">Spent</th>
@@ -42,8 +73,25 @@ export function BudgetTable({
             const CategoryIcon = categoryIcon(row.category);
             const budget = budgets.find((b) => b.id === row.budgetId);
             const over = row.remaining < 0;
+            const included = selection ? selection.selected.has(row.category) : true;
             return (
-              <tr key={row.budgetId} className="border-b border-border last:border-0 hover:bg-surface-2/60">
+              <tr
+                key={row.budgetId}
+                className={`border-b border-border last:border-0 hover:bg-surface-2/60 ${
+                  included ? "" : "opacity-45"
+                }`}
+              >
+                {selection && (
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 cursor-pointer accent-brand align-middle"
+                      checked={included}
+                      onChange={() => selection.onToggleRow(row.category)}
+                      aria-label={`Count ${row.category} toward the totals`}
+                    />
+                  </td>
+                )}
                 <td className="whitespace-nowrap px-4 py-3">
                   <span className="inline-flex items-center gap-1.5 text-text-secondary">
                     <span
