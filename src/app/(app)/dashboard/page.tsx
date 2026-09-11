@@ -6,6 +6,7 @@ import { getUserWallets, getUserTransactions, getUserBudgets } from "@/lib/queri
 import {
   monthlyTotals,
   monthlySavingsContribution,
+  monthlySavingsWithdrawal,
   spendingBreakdown,
   incomeExpenseTrend,
   netWorth,
@@ -66,11 +67,21 @@ export default async function DashboardPage({
   const current = monthlyTotals(transactions, year, month);
   const prevYM = shiftYearMonth(year, month, -1);
   const previous = monthlyTotals(transactions, prevYM.year, prevYM.month);
-  const savingsThisMonth = monthlySavingsContribution(transactions, year, month);
-  const prevSavingsThisMonth = monthlySavingsContribution(transactions, prevYM.year, prevYM.month);
-  const categories = spendingBreakdown(transactions, year, month);
+  // Money moved into savings this month — used to back the internal transfer out of
+  // "Expenses excl. savings" below, which should only ever exclude that relocation,
+  // never anything actually spent (including a plain expense paid straight out of a
+  // savings wallet — that's real spending and belongs in both expense figures).
+  const savingsContribution = monthlySavingsContribution(transactions, year, month);
+  const prevSavingsContribution = monthlySavingsContribution(transactions, prevYM.year, prevYM.month);
+  // Net change in savings this month (in minus what was later spent straight out of a
+  // savings wallet) — what "Saved this month" should read, so it drops back down the
+  // moment savings gets spent instead of holding onto the pre-expense contribution.
+  const netSavingsThisMonth = savingsContribution - monthlySavingsWithdrawal(transactions, walletsWithDeleted, year, month);
+  const prevNetSavingsThisMonth =
+    prevSavingsContribution - monthlySavingsWithdrawal(transactions, walletsWithDeleted, prevYM.year, prevYM.month);
+  const categories = spendingBreakdown(transactions, walletsWithDeleted, year, month);
   const trend = incomeExpenseTrend(transactions, year, month, trendRange);
-  const budgetRows = budgetProgress(transactions, budgets, year, month);
+  const budgetRows = budgetProgress(transactions, budgets, walletsWithDeleted, year, month);
   const recent = [...transactions].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0, 6);
 
   const activeWallets = wallets.filter((w) => !w.archived);
@@ -96,7 +107,26 @@ export default async function DashboardPage({
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Net worth" value={netWorth(wallets)} icon={WalletIcon} accent="brand" hint="Assets minus debt" />
+        <ToggleStatCard
+          icon={<WalletIcon className="h-4 w-4" strokeWidth={2} />}
+          accent="brand"
+          views={[
+            {
+              key: "all",
+              toggle: "All",
+              label: "Net worth",
+              value: netWorth(wallets),
+              hint: "Assets minus debt",
+            },
+            {
+              key: "excl-savings",
+              toggle: "Excl. savings",
+              label: "Net worth excl. savings",
+              value: netWorth(wallets) - totalSavings(wallets),
+              hint: "Cash & bank, minus debt",
+            },
+          ]}
+        />
         <ToggleStatCard
           icon={<TrendingDown className="h-4 w-4" strokeWidth={2} />}
           accent="critical"
@@ -113,8 +143,8 @@ export default async function DashboardPage({
               key: "excl-savings",
               toggle: "Excl. savings",
               label: "Expenses excl. savings",
-              value: current.expense - savingsThisMonth,
-              delta: pct(current.expense - savingsThisMonth, previous.expense - prevSavingsThisMonth),
+              value: current.expense - savingsContribution,
+              delta: pct(current.expense - savingsContribution, previous.expense - prevSavingsContribution),
               deltaGoodDirection: "down",
             },
           ]}
@@ -134,8 +164,8 @@ export default async function DashboardPage({
               key: "this-month",
               toggle: "This month",
               label: "Saved this month",
-              value: savingsThisMonth,
-              delta: pct(savingsThisMonth, prevSavingsThisMonth),
+              value: netSavingsThisMonth,
+              delta: pct(netSavingsThisMonth, prevNetSavingsThisMonth),
               deltaGoodDirection: "up",
             },
           ]}

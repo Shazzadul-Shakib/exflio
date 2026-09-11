@@ -57,6 +57,7 @@ export async function createTransactionAction(
   revalidatePath("/dashboard");
   revalidatePath("/wallets");
   revalidatePath("/transactions");
+  revalidatePath("/budgets");
   revalidatePath("/savings");
   revalidatePath("/debts");
   return { success: true };
@@ -80,6 +81,7 @@ export async function updateTransactionAction(
   revalidatePath("/dashboard");
   revalidatePath("/wallets");
   revalidatePath("/transactions");
+  revalidatePath("/budgets");
   revalidatePath("/savings");
   revalidatePath("/debts");
   return { success: true };
@@ -110,6 +112,7 @@ export async function deleteTransactionAction(transactionId: string): Promise<vo
   revalidatePath("/dashboard");
   revalidatePath("/wallets");
   revalidatePath("/transactions");
+  revalidatePath("/budgets");
   revalidatePath("/savings");
   revalidatePath("/debts");
 }

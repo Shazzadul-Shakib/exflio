@@ -90,7 +90,7 @@ export function ToggleStatCard({
       ) : null}
 
       {views.length > 1 && (
-        <div className="mt-auto inline-flex w-fit rounded-md border border-border p-0.5 text-[11px] font-medium">
+        <div className="mt-auto flex w-fit items-center gap-0.5 rounded-full bg-surface-2 p-1">
           {views.map((v, i) => (
             <button
               key={v.key}
@@ -98,9 +98,9 @@ export function ToggleStatCard({
               onClick={() => setActive(i)}
               aria-pressed={i === active}
               className={cx(
-                "rounded px-2 py-1 transition-colors",
+                "rounded-full px-3 py-1 text-[12px] font-medium transition-colors",
                 i === active
-                  ? "bg-brand-soft text-brand"
+                  ? "bg-brand text-brand-contrast shadow-sm"
                   : "text-text-muted hover:text-text-secondary",
               )}
             >

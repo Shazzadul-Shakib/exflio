@@ -65,6 +65,24 @@ export function monthlySavingsContribution(transactions: Transaction[], year: nu
   );
 }
 
+/**
+ * Money taken back out of savings wallets during a calendar month — a plain expense
+ * (not a transfer) sourced directly from a wallet of type "savings", e.g. paying for
+ * something straight out of a savings account. `monthlySavingsContribution` only
+ * tracks money moving *in*, so it stays exactly what "expenses without savings" needs
+ * to subtract; this is the other half, for callers that want the month's *net* change
+ * in savings (contribution minus withdrawal) — see "Saved this month" on the dashboard.
+ */
+export function monthlySavingsWithdrawal(transactions: Transaction[], wallets: Wallet[], year: number, month: number): number {
+  const savingsWalletIds = new Set(wallets.filter((w) => w.type === "savings").map((w) => w.id));
+  return sumBy(
+    transactions.filter(
+      (t) => isInMonth(t.date, year, month) && t.kind === "expense" && savingsWalletIds.has(t.walletId)
+    ),
+    (t) => t.amount
+  );
+}
+
 function groupByCategory(transactions: Transaction[]): { category: string; amount: number }[] {
   const byCategory = new Map<string, number>();
   for (const t of transactions) {
@@ -84,8 +102,29 @@ export function categoryBreakdown(
   return groupByCategory(transactions.filter((t) => isInMonth(t.date, year, month) && t.kind === kind));
 }
 
-export function spendingBreakdown(transactions: Transaction[], year: number, month: number): { category: string; amount: number }[] {
-  return groupByCategory(transactions.filter((t) => isInMonth(t.date, year, month) && isSpending(t)));
+/**
+ * Spending by category for the month, with the "Savings" bucket netted against any
+ * money withdrawn straight out of a savings wallet — otherwise a later expense paid
+ * out of savings (filed under its own category, same as any other spend) would leave
+ * "Savings" frozen at the month's contribution total forever, out of step with the
+ * dashboard's "Saved this month" figure. Can go negative if a month's withdrawals
+ * outweigh what was put in.
+ */
+export function spendingBreakdown(
+  transactions: Transaction[],
+  wallets: Wallet[],
+  year: number,
+  month: number
+): { category: string; amount: number }[] {
+  const rows = groupByCategory(transactions.filter((t) => isInMonth(t.date, year, month) && isSpending(t)));
+  const withdrawal = monthlySavingsWithdrawal(transactions, wallets, year, month);
+  if (withdrawal === 0) return rows;
+
+  const hasSavingsRow = rows.some((r) => r.category === SAVINGS_CATEGORY);
+  const next = hasSavingsRow
+    ? rows.map((r) => (r.category === SAVINGS_CATEGORY ? { ...r, amount: r.amount - withdrawal } : r))
+    : [...rows, { category: SAVINGS_CATEGORY, amount: -withdrawal }];
+  return next.sort((a, b) => b.amount - a.amount);
 }
 
 export function monthlyTrend(transactions: Transaction[], year: number, month: number, monthsBack = 6) {
@@ -255,9 +294,15 @@ export interface BudgetProgress {
  * `spendingBreakdown` so a budget on "Debt" or "Savings" lines up with the same
  * transfer-as-spending rule used everywhere else spending is totaled.
  */
-export function budgetProgress(transactions: Transaction[], budgets: Budget[], year: number, month: number): BudgetProgress[] {
+export function budgetProgress(
+  transactions: Transaction[],
+  budgets: Budget[],
+  wallets: Wallet[],
+  year: number,
+  month: number
+): BudgetProgress[] {
   const monthBudgets = budgetsForMonth(budgets, year, month);
-  const spendByCategory = new Map(spendingBreakdown(transactions, year, month).map((c) => [c.category, c.amount]));
+  const spendByCategory = new Map(spendingBreakdown(transactions, wallets, year, month).map((c) => [c.category, c.amount]));
 
   return monthBudgets
     .map((b) => {

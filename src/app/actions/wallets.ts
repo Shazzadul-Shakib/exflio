@@ -52,6 +52,9 @@ export async function createWalletAction(
     revalidatePath("/savings");
     revalidatePath("/debts");
     revalidatePath("/transactions");
+    // A funded wallet (fundingWalletId) records a transfer under the hood — one that can
+    // land in a budgeted category (Savings/Debt) for the current month.
+    revalidatePath("/budgets");
   }
   return result;
 }
