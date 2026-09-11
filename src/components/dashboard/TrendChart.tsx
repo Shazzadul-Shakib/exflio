@@ -2,14 +2,7 @@
 
 import { useId, useState } from "react";
 import { formatCurrency } from "@/lib/format";
-import { monthLabel } from "@/lib/format";
-
-interface TrendPoint {
-  year: number;
-  month: number;
-  income: number;
-  expense: number;
-}
+import type { TrendPoint } from "@/lib/finance";
 
 const WIDTH = 640;
 const HEIGHT = 240;
@@ -48,6 +41,9 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
     .map((d, i) => `${i === 0 ? "M" : "L"} ${x(i)} ${y(d.expense)}`)
     .join(" ");
   const incomeArea = `${incomePath} L ${x(n - 1)} ${PAD_TOP + plotH} L ${x(0)} ${PAD_TOP + plotH} Z`;
+
+  // Thin the x-axis ticks once a daily range packs in more points than fit legibly.
+  const labelStep = Math.max(1, Math.ceil(n / 8));
 
   const gridSteps = 4;
   const gridValues = Array.from(
@@ -118,18 +114,21 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
             </g>
           ))}
 
-          {data.map((d, i) => (
-            <text
-              key={`${d.year}-${d.month}`}
-              x={x(i)}
-              y={HEIGHT - 8}
-              textAnchor="middle"
-              fontSize="10.5"
-              fill="var(--text-muted)"
-            >
-              {monthLabel(d.month).slice(0, 3)}
-            </text>
-          ))}
+          {data.map(
+            (d, i) =>
+              i % labelStep === 0 && (
+                <text
+                  key={d.key}
+                  x={x(i)}
+                  y={HEIGHT - 8}
+                  textAnchor="middle"
+                  fontSize="10.5"
+                  fill="var(--text-muted)"
+                >
+                  {d.label}
+                </text>
+              )
+          )}
 
           <path d={incomeArea} fill={`url(#${gradientId})`} />
           <path
@@ -150,7 +149,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
           />
 
           {data.map((d, i) => (
-            <g key={`dots-${d.year}-${d.month}`}>
+            <g key={`dots-${d.key}`}>
               <circle
                 cx={x(i)}
                 cy={y(d.income)}
@@ -185,7 +184,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
           {/* Hover hit targets */}
           {data.map((d, i) => (
             <rect
-              key={`hit-${d.year}-${d.month}`}
+              key={`hit-${d.key}`}
               x={x(i) - plotW / n / 2}
               y={PAD_TOP}
               width={plotW / n}
@@ -204,9 +203,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
               boxShadow: "var(--shadow-card)",
             }}
           >
-            <p className="mb-1 font-medium text-text-primary">
-              {monthLabel(hovered.month)} {hovered.year}
-            </p>
+            <p className="mb-1 font-medium text-text-primary">{hovered.fullLabel}</p>
             <p className="flex items-center gap-1.5 text-text-secondary">
               <span
                 className="h-1.5 w-1.5 rounded-full"

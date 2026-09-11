@@ -1,5 +1,5 @@
 import type { Budget, Transaction, TransactionKind, Wallet, WalletType } from "./types";
-import { shiftYearMonth } from "./format";
+import { monthLabel, shiftYearMonth, todayIso } from "./format";
 import { DEBT_CATEGORY, SAVINGS_CATEGORY } from "./categories";
 
 /**
@@ -96,6 +96,115 @@ export function monthlyTrend(transactions: Transaction[], year: number, month: n
     points.push({ year: y, month: m, income: totals.income, expense: totals.expense });
   }
   return points;
+}
+
+/** Selectable windows for the dashboard's income/expense trend chart. */
+export type TrendRange = "week" | "month" | "last-month" | "6-months";
+
+export interface TrendPoint {
+  /** Stable React key — a date for daily points, "year-month" for monthly ones. */
+  key: string;
+  /** Short x-axis tick, e.g. "Sep 5" or "Sep". */
+  label: string;
+  /** Full label for the hover card, e.g. "Sep 5, 2026" or "September 2026". */
+  fullLabel: string;
+  income: number;
+  expense: number;
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function isoDate(year: number, month: number, day: number): string {
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+function addDays(dateIso: string, delta: number): string {
+  const d = new Date(dateIso + "T00:00:00");
+  d.setDate(d.getDate() + delta);
+  // Rebuild from local date parts rather than toISOString(), which reads back in UTC and
+  // shifts the date by a day in any timezone ahead of it — enough to wedge this in a loop.
+  return isoDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+
+function dailyTotals(transactions: Transaction[], dateIso: string): { income: number; expense: number } {
+  const inDay = transactions.filter((t) => t.date === dateIso);
+  return {
+    expense: sumBy(inDay.filter(isSpending), (t) => t.amount),
+    income: sumBy(
+      inDay.filter((t) => t.kind === "income"),
+      (t) => t.amount
+    ),
+  };
+}
+
+function dailyTrendPoints(transactions: Transaction[], startIso: string, endIso: string): TrendPoint[] {
+  const points: TrendPoint[] = [];
+  let cur = startIso;
+  let guard = 0;
+  while (cur <= endIso && guard < 370) {
+    const totals = dailyTotals(transactions, cur);
+    const d = new Date(cur + "T00:00:00");
+    points.push({
+      key: cur,
+      label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      fullLabel: d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      income: totals.income,
+      expense: totals.expense,
+    });
+    cur = addDays(cur, 1);
+    guard++;
+  }
+  return points;
+}
+
+/**
+ * The daily start/end for the "week" / "month" / "last month" trend ranges — anchored to the
+ * dashboard's selected month, but capped at today so a month still in progress doesn't trail
+ * off into a flat line of future zeros.
+ */
+function trendWindow(year: number, month: number, range: "week" | "month" | "last-month"): { start: string; end: string } {
+  const today = todayIso();
+  const monthEnd = isoDate(year, month, daysInMonth(year, month));
+  const anchor = monthEnd < today ? monthEnd : today;
+
+  if (range === "month") {
+    const start = isoDate(year, month, 1);
+    return { start, end: anchor > start ? anchor : start };
+  }
+  if (range === "last-month") {
+    const prev = shiftYearMonth(year, month, -1);
+    const start = isoDate(prev.year, prev.month, 1);
+    const prevEnd = isoDate(prev.year, prev.month, daysInMonth(prev.year, prev.month));
+    const end = prevEnd < today ? prevEnd : today;
+    return { start, end: end > start ? end : start };
+  }
+  // "week": trailing 7 days ending at the anchor.
+  return { start: addDays(anchor, -6), end: anchor };
+}
+
+/**
+ * Builds the dashboard's income/expense trend for the selected range, anchored to `year`/`month`
+ * (the page's selected month) — "week"/"month"/"last month" break it down by day, "6-months"
+ * keeps the original monthly view.
+ */
+export function incomeExpenseTrend(transactions: Transaction[], year: number, month: number, range: TrendRange): TrendPoint[] {
+  if (range === "6-months") {
+    return monthlyTrend(transactions, year, month, 6).map((p) => ({
+      key: `${p.year}-${p.month}`,
+      label: monthLabel(p.month).slice(0, 3),
+      fullLabel: `${monthLabel(p.month)} ${p.year}`,
+      income: p.income,
+      expense: p.expense,
+    }));
+  }
+  const { start, end } = trendWindow(year, month, range);
+  return dailyTrendPoints(transactions, start, end);
 }
 
 export function walletsByType(wallets: Wallet[], type: WalletType): Wallet[] {
@@ -208,4 +317,36 @@ export function compareBudgetProgress(base: BudgetProgress[], compare: BudgetPro
       const bMax = Math.max(b.base?.budgeted ?? 0, b.compare?.budgeted ?? 0);
       return bMax - aMax;
     });
+}
+
+export interface CategoryComparisonRow {
+  category: string;
+  baseAmount: number;
+  compareAmount: number;
+  /** baseAmount − compareAmount (a missing side counts as 0). */
+  delta: number;
+}
+
+/**
+ * Lines up two months' category totals (e.g. an expense breakdown from `categoryBreakdown`)
+ * by category for a side-by-side comparison — the transactions-page counterpart to
+ * `compareBudgetProgress`, for plain totals rather than budget progress. A category appears
+ * on a row when either month has an amount for it; the other side is 0. Rows are ordered by
+ * the larger of the two amounts.
+ */
+export function compareCategoryTotals(
+  base: { category: string; amount: number }[],
+  compare: { category: string; amount: number }[]
+): CategoryComparisonRow[] {
+  const byCategory = new Map<string, { base: number; compare: number }>();
+  for (const row of base) byCategory.set(row.category, { base: row.amount, compare: 0 });
+  for (const row of compare) {
+    const entry = byCategory.get(row.category);
+    if (entry) entry.compare = row.amount;
+    else byCategory.set(row.category, { base: 0, compare: row.amount });
+  }
+
+  return [...byCategory.entries()]
+    .map(([category, { base: b, compare: c }]) => ({ category, baseAmount: b, compareAmount: c, delta: b - c }))
+    .sort((a, b) => Math.max(b.baseAmount, b.compareAmount) - Math.max(a.baseAmount, a.compareAmount));
 }

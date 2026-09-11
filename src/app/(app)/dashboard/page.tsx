@@ -7,18 +7,20 @@ import {
   monthlyTotals,
   monthlySavingsContribution,
   spendingBreakdown,
-  monthlyTrend,
+  incomeExpenseTrend,
   netWorth,
   totalSavings,
   totalDebt,
   walletsByType,
   budgetProgress,
+  type TrendRange,
 } from "@/lib/finance";
 import { currentYearMonth, shiftYearMonth, monthLabel } from "@/lib/format";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ToggleStatCard } from "@/components/dashboard/ToggleStatCard";
 import { CategoryBarChart } from "@/components/dashboard/CategoryBarChart";
 import { TrendChart } from "@/components/dashboard/TrendChart";
+import { TrendRangeSelect } from "@/components/dashboard/TrendRangeSelect";
 import { MonthYearPicker } from "@/components/dashboard/MonthYearPicker";
 import { AddTransactionButton } from "@/components/transactions/AddTransactionButton";
 import { WalletCard } from "@/components/wallets/WalletCard";
@@ -29,6 +31,8 @@ import { CreateBudgetButton } from "@/components/budgets/CreateBudgetButton";
 import { Card, EmptyState } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Dashboard — Exflio" };
+
+const TREND_RANGES: TrendRange[] = ["week", "month", "last-month", "6-months"];
 
 function pct(current: number, previous: number): number | undefined {
   if (previous === 0) return current === 0 ? undefined : 100;
@@ -45,6 +49,10 @@ export default async function DashboardPage({
   const defaults = currentYearMonth();
   const year = Number(params.year) || defaults.year;
   const month = Number(params.month) || defaults.month;
+  const rawTrendRange = Array.isArray(params.trend) ? params.trend[0] : params.trend;
+  const trendRange: TrendRange = TREND_RANGES.includes(rawTrendRange as TrendRange)
+    ? (rawTrendRange as TrendRange)
+    : "6-months";
 
   const [walletsWithDeleted, transactions, budgets] = await Promise.all([
     getUserWallets(user.id, { includeDeleted: true }),
@@ -61,7 +69,7 @@ export default async function DashboardPage({
   const savingsThisMonth = monthlySavingsContribution(transactions, year, month);
   const prevSavingsThisMonth = monthlySavingsContribution(transactions, prevYM.year, prevYM.month);
   const categories = spendingBreakdown(transactions, year, month);
-  const trend = monthlyTrend(transactions, year, month, 6);
+  const trend = incomeExpenseTrend(transactions, year, month, trendRange);
   const budgetRows = budgetProgress(transactions, budgets, year, month);
   const recent = [...transactions].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0, 6);
 
@@ -139,7 +147,7 @@ export default async function DashboardPage({
         <Card className="p-5 lg:col-span-3">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-text-primary">Income vs. expense</h3>
-            <span className="text-[12.5px] text-text-muted">Last 6 months</span>
+            <TrendRangeSelect value={trendRange} />
           </div>
           <TrendChart data={trend} />
         </Card>

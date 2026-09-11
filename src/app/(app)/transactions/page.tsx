@@ -1,13 +1,27 @@
 import type { Metadata } from "next";
+import { TrendingDown, TrendingUp, Wallet as WalletIcon } from "lucide-react";
 import { requireUser } from "@/lib/session";
-import { getUserWallets, getTransactionsPage, getTransactionsSummary } from "@/lib/queries";
+import { getUserWallets, getUserTransactions, getTransactionsPage, getTransactionsSummary } from "@/lib/queries";
 import { parseFilters } from "@/lib/transactionFilters";
-import { formatCurrency } from "@/lib/format";
+import { monthlyTotals, categoryBreakdown, compareCategoryTotals } from "@/lib/finance";
+import { formatCurrency, formatCompactCurrency, currentYearMonth, shiftYearMonth, monthLabel } from "@/lib/format";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { MonthYearPicker } from "@/components/dashboard/MonthYearPicker";
+import { CompareToggle } from "@/components/budgets/CompareToggle";
+import { SwapMonthsButton } from "@/components/budgets/SwapMonthsButton";
 import { FilterBar } from "@/components/transactions/FilterBar";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { AddTransactionButton } from "@/components/transactions/AddTransactionButton";
+import { CategoryComparisonTable } from "@/components/transactions/CategoryComparisonTable";
+import { Card } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Transactions — Exflio" };
+
+/** Percent change from `previous` to `current`, or undefined when there's no meaningful baseline. */
+function pct(current: number, previous: number): number | undefined {
+  if (previous === 0) return current === 0 ? undefined : 100;
+  return ((current - previous) / previous) * 100;
+}
 
 export default async function TransactionsPage({
   searchParams,
@@ -21,13 +35,36 @@ export default async function TransactionsPage({
   ]);
   const filters = parseFilters(rawParams);
 
-  const [page, summary] = await Promise.all([
+  // Independent of the list filters above — these drive only the month-comparison card below.
+  const defaults = currentYearMonth();
+  const year = Number(rawParams.year) || defaults.year;
+  const month = Number(rawParams.month) || defaults.month;
+  const compare = rawParams.compare === "1";
+  const prevYM = shiftYearMonth(year, month, -1);
+  const compareYear = Number(rawParams.cy) || prevYM.year;
+  const compareMonth = Number(rawParams.cm) || prevYM.month;
+
+  const [page, summary, allTransactions] = await Promise.all([
     getTransactionsPage(user.id, filters, 0),
     getTransactionsSummary(user.id, filters),
+    getUserTransactions(user.id),
   ]);
   // Deleted wallets are carried through only so their name still renders on
   // past transactions; they're kept out of pickers and the wallet filter.
   const activeWallets = walletsWithDeleted.filter((w) => !w.archived && !w.deletedAt);
+
+  const baseLabel = `${monthLabel(month)} ${year}`;
+  const compareLabel = `${monthLabel(compareMonth)} ${compareYear}`;
+  const compareShort = `${monthLabel(compareMonth).slice(0, 3)} ${compareYear}`;
+
+  const baseTotals = monthlyTotals(allTransactions, year, month);
+  const compareTotals = monthlyTotals(allTransactions, compareYear, compareMonth);
+  const comparisonRows = compare
+    ? compareCategoryTotals(
+        categoryBreakdown(allTransactions, year, month, "expense"),
+        categoryBreakdown(allTransactions, compareYear, compareMonth, "expense")
+      )
+    : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,6 +74,61 @@ export default async function TransactionsPage({
           <p className="text-[13px] text-text-muted">Every expense, income and transfer across your wallets.</p>
         </div>
         <AddTransactionButton wallets={activeWallets} />
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <CompareToggle active={compare} baseYear={year} baseMonth={month} />
+          {compare && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <MonthYearPicker year={year} month={month} />
+              <div className="flex items-center gap-2">
+                <SwapMonthsButton year={year} month={month} compareYear={compareYear} compareMonth={compareMonth} />
+                <span className="text-[13px] text-text-muted">vs</span>
+                <MonthYearPicker year={compareYear} month={compareMonth} yearKey="cy" monthKey="cm" ariaPrefix="Comparison" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {compare && (
+          <Card className="p-5">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-text-primary">Month comparison</h3>
+              <span className="text-[12.5px] text-text-muted">
+                {baseLabel} vs {compareLabel}
+              </span>
+            </div>
+            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <StatCard
+                label="Income"
+                value={baseTotals.income}
+                icon={TrendingUp}
+                accent="good"
+                delta={pct(baseTotals.income, compareTotals.income)}
+                deltaGoodDirection="up"
+                deltaLabel={`vs ${compareShort}`}
+              />
+              <StatCard
+                label="Expense"
+                value={baseTotals.expense}
+                icon={TrendingDown}
+                accent="critical"
+                delta={pct(baseTotals.expense, compareTotals.expense)}
+                deltaGoodDirection="down"
+                deltaLabel={`vs ${compareShort}`}
+              />
+              <StatCard
+                label="Net"
+                value={baseTotals.net}
+                icon={WalletIcon}
+                accent={baseTotals.net >= 0 ? "good" : "critical"}
+                hint={`${compareShort}: ${formatCompactCurrency(compareTotals.net)}`}
+              />
+            </div>
+            <CategoryComparisonTable rows={comparisonRows} baseLabel={baseLabel} compareLabel={compareLabel} />
+          </Card>
+        )}
       </div>
 
       <FilterBar wallets={activeWallets} showWalletFilter />
