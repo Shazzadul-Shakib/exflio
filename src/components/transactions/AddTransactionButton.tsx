@@ -12,11 +12,13 @@ export function AddTransactionButton({
   defaultWalletId,
   label = "Add transaction",
   variant = "primary",
+  className,
 }: {
   wallets: Wallet[];
   defaultWalletId?: string;
   label?: string;
   variant?: "primary" | "secondary" | "outline";
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -24,7 +26,7 @@ export function AddTransactionButton({
 
   return (
     <>
-      <Button variant={variant} onClick={() => setOpen(true)}>
+      <Button variant={variant} className={className} onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4" strokeWidth={2.5} />
         {label}
       </Button>

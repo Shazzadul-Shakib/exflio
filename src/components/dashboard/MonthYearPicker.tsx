@@ -3,6 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Dropdown } from "@/components/Dropdown";
+import { cx } from "@/components/cx";
 import { MONTH_NAMES, shiftYearMonth } from "@/lib/format";
 
 export function MonthYearPicker({
@@ -11,6 +12,7 @@ export function MonthYearPicker({
   yearKey = "year",
   monthKey = "month",
   ariaPrefix = "",
+  className,
 }: {
   year: number;
   month: number;
@@ -20,6 +22,7 @@ export function MonthYearPicker({
   monthKey?: string;
   /** Prefixed onto the prev/next button labels so screen readers can tell two pickers apart. */
   ariaPrefix?: string;
+  className?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -39,11 +42,11 @@ export function MonthYearPicker({
   const label = (suffix: string) => `${ariaPrefix}${ariaPrefix ? " " : ""}${suffix}`;
 
   return (
-    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-surface p-1">
+    <div className={cx("flex items-center justify-center gap-2 rounded-lg border border-border bg-surface p-1", className)}>
       <button
         type="button"
         onClick={() => go(prev.year, prev.month)}
-        className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-surface-2"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-secondary hover:bg-surface-2"
         aria-label={label("Previous month")}
       >
         <ChevronLeft className="h-4 w-4" strokeWidth={2} />
@@ -75,7 +78,7 @@ export function MonthYearPicker({
       <button
         type="button"
         onClick={() => go(next.year, next.month)}
-        className="flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-surface-2"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-secondary hover:bg-surface-2"
         aria-label={label("Next month")}
       >
         <ChevronRight className="h-4 w-4" strokeWidth={2} />
