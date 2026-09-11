@@ -81,9 +81,9 @@ export default async function DashboardPage({
             Here&apos;s how {monthLabel(month)} {year} looks so far.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <MonthYearPicker year={year} month={month} />
-          <AddTransactionButton wallets={activeWallets} label="Add" />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <MonthYearPicker year={year} month={month} className="w-full sm:w-auto" />
+          <AddTransactionButton wallets={activeWallets} label="Add" className="w-full sm:w-auto" />
         </div>
       </div>
 

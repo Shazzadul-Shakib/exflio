@@ -12,16 +12,18 @@ export function CreateBudgetButton({
   budgets = [],
   defaultYear,
   defaultMonth,
+  className,
 }: {
   label?: string;
   budgets?: Budget[];
   defaultYear?: number;
   defaultMonth?: number;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
+      <Button className={className} onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4" strokeWidth={2.5} />
         {label}
       </Button>

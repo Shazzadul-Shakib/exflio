@@ -48,9 +48,14 @@ export default async function BudgetsPage({
                 : `Set what you plan to spend per category, and see how ${baseLabel} is tracking.`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <MonthYearPicker year={year} month={month} />
-            <CreateBudgetButton budgets={budgets} defaultYear={year} defaultMonth={month} />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <MonthYearPicker year={year} month={month} className="w-full sm:w-auto" />
+            <CreateBudgetButton
+              budgets={budgets}
+              defaultYear={year}
+              defaultMonth={month}
+              className="w-full sm:w-auto"
+            />
           </div>
         </div>
 
