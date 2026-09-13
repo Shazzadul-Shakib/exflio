@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import { Button } from "@/components/ui";
@@ -18,6 +19,7 @@ export function TransactionRowActions({
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   return (
     <div className="flex items-center justify-end gap-1">
@@ -73,6 +75,10 @@ export function TransactionRowActions({
               startTransition(async () => {
                 await deleteTransactionAction(transaction.id);
                 setConfirmOpen(false);
+                // deleteTransactionAction is called directly (not via a <form action>), so unlike
+                // the create/edit form above, Next won't auto-refresh this route's Server Components —
+                // revalidatePath alone only invalidates the cache for the *next* navigation.
+                router.refresh();
               });
             }}
           >
