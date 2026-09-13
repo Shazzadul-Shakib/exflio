@@ -83,6 +83,29 @@ export function monthlySavingsWithdrawal(transactions: Transaction[], wallets: W
   );
 }
 
+/**
+ * Money moved *back out* of a savings wallet into a non-savings wallet by transfer during
+ * a calendar month — e.g. pulling part of a contribution back into checking without
+ * spending it. Unlike `monthlySavingsWithdrawal` this isn't spending (it never leaves the
+ * user's own wallets), so it nets against `monthlySavingsContribution` instead of counting
+ * as an expense: money that came right back out was never really relocated to savings, so
+ * it shouldn't stay excluded from "Expenses excl. savings" or credited to "Saved this month".
+ */
+export function monthlySavingsReversal(transactions: Transaction[], wallets: Wallet[], year: number, month: number): number {
+  const savingsWalletIds = new Set(wallets.filter((w) => w.type === "savings").map((w) => w.id));
+  return sumBy(
+    transactions.filter(
+      (t) =>
+        isInMonth(t.date, year, month) &&
+        t.kind === "transfer" &&
+        savingsWalletIds.has(t.walletId) &&
+        !!t.toWalletId &&
+        !savingsWalletIds.has(t.toWalletId)
+    ),
+    (t) => t.amount
+  );
+}
+
 function groupByCategory(transactions: Transaction[]): { category: string; amount: number }[] {
   const byCategory = new Map<string, number>();
   for (const t of transactions) {

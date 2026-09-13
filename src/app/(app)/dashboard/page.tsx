@@ -6,6 +6,7 @@ import { getUserWallets, getUserTransactions, getUserBudgets } from "@/lib/queri
 import {
   monthlyTotals,
   monthlySavingsContribution,
+  monthlySavingsReversal,
   monthlySavingsWithdrawal,
   spendingBreakdown,
   incomeExpenseTrend,
@@ -67,15 +68,20 @@ export default async function DashboardPage({
   const current = monthlyTotals(transactions, year, month);
   const prevYM = shiftYearMonth(year, month, -1);
   const previous = monthlyTotals(transactions, prevYM.year, prevYM.month);
-  // Money moved into savings this month — used to back the internal transfer out of
-  // "Expenses excl. savings" below, which should only ever exclude that relocation,
+  // Money moved into savings this month, net of any of it moved straight back out by
+  // transfer — used to back the internal transfer out of "Expenses excl. savings" below,
+  // which should only ever exclude money that's actually still relocated to savings,
   // never anything actually spent (including a plain expense paid straight out of a
-  // savings wallet — that's real spending and belongs in both expense figures).
-  const savingsContribution = monthlySavingsContribution(transactions, year, month);
-  const prevSavingsContribution = monthlySavingsContribution(transactions, prevYM.year, prevYM.month);
-  // Net change in savings this month (in minus what was later spent straight out of a
-  // savings wallet) — what "Saved this month" should read, so it drops back down the
-  // moment savings gets spent instead of holding onto the pre-expense contribution.
+  // savings wallet — that's real spending and belongs in both expense figures) and never
+  // a contribution that was itself undone this month.
+  const savingsContribution =
+    monthlySavingsContribution(transactions, year, month) - monthlySavingsReversal(transactions, walletsWithDeleted, year, month);
+  const prevSavingsContribution =
+    monthlySavingsContribution(transactions, prevYM.year, prevYM.month) -
+    monthlySavingsReversal(transactions, walletsWithDeleted, prevYM.year, prevYM.month);
+  // Net change in savings this month (in, minus what was moved back out or spent straight
+  // out of a savings wallet) — what "Saved this month" should read, so it drops back down
+  // the moment savings gets spent or un-contributed instead of holding onto the original total.
   const netSavingsThisMonth = savingsContribution - monthlySavingsWithdrawal(transactions, walletsWithDeleted, year, month);
   const prevNetSavingsThisMonth =
     prevSavingsContribution - monthlySavingsWithdrawal(transactions, walletsWithDeleted, prevYM.year, prevYM.month);
