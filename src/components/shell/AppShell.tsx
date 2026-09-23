@@ -83,7 +83,7 @@ function SidebarContent({
       <Link href="/" onClick={onNavigate} className="flex items-center gap-2 px-2 pt-1">
         <Logomark size="sm" />
         <span className="text-base font-semibold text-text-primary">
-          Exflio
+          Extrack
         </span>
       </Link>
       <NavLinks pathname={pathname} onNavigate={onNavigate} />
@@ -154,7 +154,7 @@ export function AppShell({
             <Menu className="h-5 w-5" strokeWidth={2} />
           </button>
           <h1 className="text-sm font-semibold text-text-primary">
-            {activeItem?.label ?? "Exflio"}
+            {activeItem?.label ?? "Extrack"}
           </h1>
         </header>
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">

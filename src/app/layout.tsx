@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Exflio — Personal finance tracker",
+  title: "Extrack — Personal finance tracker",
   description: "Track wallets, expenses, savings and debt in one clear dashboard.",
 };
 

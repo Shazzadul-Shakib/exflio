@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui";
 import { WALLET_TYPE_META } from "@/lib/categories";
 import type { Wallet, WalletType } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Wallets — Exflio" };
+export const metadata: Metadata = { title: "Wallets — Extrack" };
 
 const SECTION_ORDER: WalletType[] = ["cash", "bank", "savings", "debt"];
 

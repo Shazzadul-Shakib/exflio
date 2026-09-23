@@ -2,7 +2,7 @@
 
 <img src="public/next.svg" width="0" height="0" alt="" />
 
-# Exflio
+# Extrack
 
 **A full-stack personal finance tracker — cash, bank, savings and debt in one dashboard.**
 
@@ -104,8 +104,8 @@ A few things worth pointing out if you're skimming this as a portfolio piece rat
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/Shazzadul-Shakib/exflio.git
-cd exflio
+git clone https://github.com/Shazzadul-Shakib/extrack.git
+cd extrack
 npm install
 ```
 

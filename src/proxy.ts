@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/crypto";
 
 const PUBLIC_ROUTES = ["/login", "/signup"];
-const COOKIE_NAME = "exflio_session";
+const COOKIE_NAME = "extrack_session";
 
 function hasValidSession(request: NextRequest): boolean {
   const token = request.cookies.get(COOKIE_NAME)?.value;

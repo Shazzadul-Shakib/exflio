@@ -12,7 +12,7 @@ import { TransactionList } from "@/components/transactions/TransactionList";
 import { AddTransactionButton } from "@/components/transactions/AddTransactionButton";
 import { EmptyState } from "@/components/ui";
 
-export const metadata: Metadata = { title: "Savings — Exflio" };
+export const metadata: Metadata = { title: "Savings — Extrack" };
 
 export default async function SavingsPage({
   searchParams,

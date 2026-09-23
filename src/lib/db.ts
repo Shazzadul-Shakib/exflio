@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 declare global {
-  var __exflioPrisma: ReturnType<typeof buildClient> | undefined;
+  var __extrackPrisma: ReturnType<typeof buildClient> | undefined;
 }
 
 const RETRY_ATTEMPTS = 4;
@@ -67,8 +67,8 @@ function buildClient() {
 // closed. `globalThis` survives module re-evaluation (it only resets on a
 // full process restart), so this keeps one client alive for the life of the
 // dev server.
-export const prisma = global.__exflioPrisma ?? buildClient();
+export const prisma = global.__extrackPrisma ?? buildClient();
 
 if (process.env.NODE_ENV !== "production") {
-  global.__exflioPrisma = prisma;
+  global.__extrackPrisma = prisma;
 }

@@ -15,7 +15,7 @@ import { AddTransactionButton } from "@/components/transactions/AddTransactionBu
 import { CategoryComparisonTable } from "@/components/transactions/CategoryComparisonTable";
 import { Card } from "@/components/ui";
 
-export const metadata: Metadata = { title: "Transactions — Exflio" };
+export const metadata: Metadata = { title: "Transactions — Extrack" };
 
 /** Percent change from `previous` to `current`, or undefined when there's no meaningful baseline. */
 function pct(current: number, previous: number): number | undefined {

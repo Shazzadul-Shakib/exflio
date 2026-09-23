@@ -9,7 +9,7 @@ import { CreateBudgetButton } from "@/components/budgets/CreateBudgetButton";
 import { CompareToggle } from "@/components/budgets/CompareToggle";
 import { SwapMonthsButton } from "@/components/budgets/SwapMonthsButton";
 
-export const metadata: Metadata = { title: "Budgets — Exflio" };
+export const metadata: Metadata = { title: "Budgets — Extrack" };
 
 export default async function BudgetsPage({
   searchParams,

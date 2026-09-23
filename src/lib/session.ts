@@ -5,7 +5,7 @@ import { signToken, verifyToken } from "./crypto";
 import { findUserById } from "./users";
 import type { PublicUser } from "./types";
 
-const COOKIE_NAME = "exflio_session";
+const COOKIE_NAME = "extrack_session";
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 interface SessionPayload {

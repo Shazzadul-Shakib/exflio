@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const user = await getCurrentUser();
   const wallet = user ? await getWallet(user.id, id) : null;
-  return { title: wallet ? `${wallet.name} — Exflio` : "Wallet — Exflio" };
+  return { title: wallet ? `${wallet.name} — Extrack` : "Wallet — Extrack" };
 }
 
 export default async function WalletDetailPage({

@@ -32,7 +32,7 @@ import { BudgetProgressChart } from "@/components/budgets/BudgetProgressChart";
 import { CreateBudgetButton } from "@/components/budgets/CreateBudgetButton";
 import { Card, EmptyState } from "@/components/ui";
 
-export const metadata: Metadata = { title: "Dashboard — Exflio" };
+export const metadata: Metadata = { title: "Dashboard — Extrack" };
 
 const TREND_RANGES: TrendRange[] = ["week", "month", "last-month", "6-months"];
 
