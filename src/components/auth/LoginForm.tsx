@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useRef } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { AlertCircle } from "lucide-react";
 import { loginAction, type AuthFormState } from "@/app/actions/auth";
 import { Button, Field, Input } from "@/components/ui";
@@ -12,6 +13,7 @@ const DEMO_EMAIL = "astro@gmail.com";
 const DEMO_PASSWORD = "12345678";
 
 export function LoginForm() {
+  const t = useTranslations("Auth");
   const [state, formAction, pending] = useActionState(loginAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -31,7 +33,7 @@ export function LoginForm() {
       className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-6"
       style={{ boxShadow: "var(--shadow-card)" }}
     >
-      <Field label="Email" htmlFor="email">
+      <Field label={t("email")} htmlFor="email">
         <Input
           ref={emailRef}
           id="email"
@@ -43,7 +45,7 @@ export function LoginForm() {
           required
         />
       </Field>
-      <Field label="Password" htmlFor="password">
+      <Field label={t("password")} htmlFor="password">
         <Input
           ref={passwordRef}
           id="password"
@@ -62,15 +64,15 @@ export function LoginForm() {
         </p>
       )}
       <Button type="submit" loading={pending} className="mt-1 w-full">
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? t("signingIn") : t("signIn")}
       </Button>
       <Button type="button" variant="secondary" onClick={handleDemoLogin} disabled={pending} className="w-full">
-        Try demo account
+        {t("tryDemo")}
       </Button>
       <p className="text-center text-[13px] text-text-muted">
-        New here?{" "}
+        {t("newHere")}{" "}
         <Link href="/signup" className="font-medium text-brand hover:underline">
-          Create an account
+          {t("createAccountLink")}
         </Link>
       </p>
     </form>

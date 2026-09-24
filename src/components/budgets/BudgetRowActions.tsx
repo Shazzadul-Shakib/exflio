@@ -1,15 +1,21 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import { Button } from "@/components/ui";
 import { BudgetForm } from "./BudgetForm";
 import { deleteBudgetAction } from "@/app/actions/budgets";
+import { formatNumber } from "@/lib/format";
 import type { Budget } from "@/lib/types";
 
 export function BudgetRowActions({ budget, budgets }: { budget: Budget; budgets: Budget[] }) {
+  const t = useTranslations("Budgets");
+  const tCommon = useTranslations("Common");
+  const tCategories = useTranslations("Categories");
+  const locale = useLocale();
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -21,8 +27,8 @@ export function BudgetRowActions({ budget, budgets }: { budget: Budget; budgets:
         type="button"
         onClick={() => setEditOpen(true)}
         className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
-        aria-label="Edit budget"
-        title="Edit"
+        aria-label={t("editBudget")}
+        title={tCommon("edit")}
       >
         <Pencil className="h-4 w-4" strokeWidth={2} />
       </button>
@@ -30,24 +36,28 @@ export function BudgetRowActions({ budget, budgets }: { budget: Budget; budgets:
         type="button"
         onClick={() => setConfirmOpen(true)}
         className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-status-critical-soft hover:text-status-critical"
-        aria-label="Delete budget"
-        title="Delete"
+        aria-label={t("deleteBudget")}
+        title={tCommon("delete")}
       >
         <Trash2 className="h-4 w-4" strokeWidth={2} />
       </button>
 
-      <Modal open={editOpen} onClose={() => setEditOpen(false)} title="Edit budget">
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title={t("editBudget")}>
         <BudgetForm budget={budget} budgets={budgets} onSuccess={() => setEditOpen(false)} />
       </Modal>
 
-      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Delete budget">
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title={t("deleteBudget")}>
         <p className="text-sm text-text-secondary">
-          This removes the <span className="font-medium text-text-primary">{budget.category}</span> budget for{" "}
-          {budget.month}/{budget.year}. This can&apos;t be undone.
+          {t.rich("deleteBudgetDesc", {
+            category: tCategories(budget.category),
+            month: formatNumber(budget.month, locale),
+            year: formatNumber(budget.year, locale),
+            b: (chunks) => <span className="font-medium text-text-primary">{chunks}</span>,
+          })}
         </p>
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)}>
-            Cancel
+            {tCommon("cancel")}
           </Button>
           <Button
             variant="danger"
@@ -64,7 +74,7 @@ export function BudgetRowActions({ budget, budgets }: { budget: Budget; budgets:
               });
             }}
           >
-            {isPending ? "Deleting…" : "Delete"}
+            {isPending ? tCommon("deleting") : tCommon("delete")}
           </Button>
         </div>
       </Modal>

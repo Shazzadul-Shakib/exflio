@@ -20,7 +20,7 @@ export function Logomark({
     >
       <svg
         viewBox="0 0 24 24"
-        className={size === "sm" ? "h-[18px] w-[18px]" : "h-[22px] w-[22px]"}
+        className={size === "sm" ? "h-4.5 w-4.5" : "h-[22px] w-[22px]"}
         fill="none"
       >
         <path

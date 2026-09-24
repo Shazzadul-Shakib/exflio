@@ -1,10 +1,12 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Dropdown } from "@/components/Dropdown";
 import { cx } from "@/components/cx";
-import { MONTH_NAMES, shiftYearMonth } from "@/lib/format";
+import { getMonthNames, shiftYearMonth } from "@/lib/format";
 
 export function MonthYearPicker({
   year,
@@ -24,6 +26,9 @@ export function MonthYearPicker({
   ariaPrefix?: string;
   className?: string;
 }) {
+  const t = useTranslations("MonthYearPicker");
+  const locale = useLocale();
+  const monthNames = getMonthNames(locale);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -47,7 +52,7 @@ export function MonthYearPicker({
         type="button"
         onClick={() => go(prev.year, prev.month)}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-secondary hover:bg-surface-2"
-        aria-label={label("Previous month")}
+        aria-label={label(t("previousMonth"))}
       >
         <ChevronLeft className="h-4 w-4" strokeWidth={2} />
       </button>
@@ -55,9 +60,9 @@ export function MonthYearPicker({
         variant="ghost"
         value={month}
         onChange={(e) => go(year, Number(e.target.value))}
-        aria-label={label("Month")}
+        aria-label={label(t("month"))}
       >
-        {MONTH_NAMES.map((name, i) => (
+        {monthNames.map((name, i) => (
           <option key={name} value={i + 1}>
             {name}
           </option>
@@ -67,7 +72,7 @@ export function MonthYearPicker({
         variant="ghost"
         value={year}
         onChange={(e) => go(Number(e.target.value), month)}
-        aria-label={label("Year")}
+        aria-label={label(t("year"))}
       >
         {years.map((y) => (
           <option key={y} value={y}>
@@ -79,7 +84,7 @@ export function MonthYearPicker({
         type="button"
         onClick={() => go(next.year, next.month)}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-secondary hover:bg-surface-2"
-        aria-label={label("Next month")}
+        aria-label={label(t("nextMonth"))}
       >
         <ChevronRight className="h-4 w-4" strokeWidth={2} />
       </button>

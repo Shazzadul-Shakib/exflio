@@ -1,3 +1,6 @@
+"use client";
+
+import { useLocale, useTranslations } from "next-intl";
 import { Search } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import { TransactionRowActions } from "./TransactionRowActions";
@@ -5,43 +8,45 @@ import { categoryIcon, categorySlot } from "@/lib/categories";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { Transaction, Wallet } from "@/lib/types";
 
-function walletName(wallets: Wallet[], id: string | null): string {
+function walletName(wallets: Wallet[], id: string | null, deletedLabel: string): string {
   if (!id) return "—";
-  return wallets.find((w) => w.id === id)?.name ?? "Deleted wallet";
+  return wallets.find((w) => w.id === id)?.name ?? deletedLabel;
 }
 
 function AmountCell({ transaction }: { transaction: Transaction }) {
+  const locale = useLocale();
   if (transaction.kind === "expense") {
     return (
       <span className="font-medium text-status-critical">
-        -{formatCurrency(transaction.amount)}
+        -{formatCurrency(transaction.amount, "BDT", locale)}
       </span>
     );
   }
   if (transaction.kind === "income") {
     return (
       <span className="font-medium text-status-good">
-        +{formatCurrency(transaction.amount)}
+        +{formatCurrency(transaction.amount, "BDT", locale)}
       </span>
     );
   }
   return (
     <span className="font-medium text-text-primary">
-      {formatCurrency(transaction.amount)}
+      {formatCurrency(transaction.amount, "BDT", locale)}
     </span>
   );
 }
 
 function KindBadge({ kind }: { kind: Transaction["kind"] }) {
+  const tCommon = useTranslations("Common");
   const styles: Record<Transaction["kind"], string> = {
     expense: "bg-status-critical-soft text-status-critical",
     income: "bg-status-good-soft text-status-good",
     transfer: "bg-brand-soft text-brand",
   };
   const labels: Record<Transaction["kind"], string> = {
-    expense: "Expense",
-    income: "Income",
-    transfer: "Transfer",
+    expense: tCommon("kindExpense"),
+    income: tCommon("kindIncome"),
+    transfer: tCommon("kindTransfer"),
   };
   return (
     <span
@@ -68,12 +73,15 @@ export function TransactionTable({
   wallets: Wallet[];
   selection?: TransactionSelection;
 }) {
+  const t = useTranslations("Transactions");
+  const tCategories = useTranslations("Categories");
+  const locale = useLocale();
   if (transactions.length === 0) {
     return (
       <EmptyState
         icon={Search}
-        title="No transactions match"
-        description="Try widening your filters, or add a new transaction to get started."
+        title={t("noMatchTitle")}
+        description={t("noMatchDesc")}
       />
     );
   }
@@ -99,26 +107,26 @@ export function TransactionTable({
                     if (el) el.indeterminate = someSelected;
                   }}
                   onChange={(e) => selection.onToggleAll(e.target.checked)}
-                  aria-label="Select all loaded transactions"
+                  aria-label={t("selectAllLoaded")}
                 />
               </th>
             )}
-            <th className="px-4 py-3 font-medium">Date</th>
-            <th className="px-4 py-3 font-medium">Description</th>
-            <th className="px-4 py-3 font-medium">Category</th>
-            <th className="px-4 py-3 font-medium">Wallet</th>
-            <th className="px-4 py-3 font-medium">Type</th>
-            <th className="px-4 py-3 text-right font-medium">Amount</th>
+            <th className="px-4 py-3 font-medium">{t("date")}</th>
+            <th className="px-4 py-3 font-medium">{t("description")}</th>
+            <th className="px-4 py-3 font-medium">{t("category")}</th>
+            <th className="px-4 py-3 font-medium">{t("wallet")}</th>
+            <th className="px-4 py-3 font-medium">{t("type")}</th>
+            <th className="px-4 py-3 text-right font-medium">{t("amount")}</th>
             <th className="px-4 py-3" />
           </tr>
         </thead>
         <tbody>
-          {transactions.map((t) => {
-            const CategoryIcon = categoryIcon(t.category);
-            const isSelected = selection?.selectedIds.has(t.id) ?? false;
+          {transactions.map((tx) => {
+            const CategoryIcon = categoryIcon(tx.category);
+            const isSelected = selection?.selectedIds.has(tx.id) ?? false;
             return (
               <tr
-                key={t.id}
+                key={tx.id}
                 className={`border-b border-border last:border-0 hover:bg-surface-2/60 ${
                   isSelected ? "bg-brand-soft/40" : ""
                 }`}
@@ -129,26 +137,26 @@ export function TransactionTable({
                       type="checkbox"
                       className="h-3.5 w-3.5 cursor-pointer accent-brand align-middle"
                       checked={isSelected}
-                      onChange={() => selection.onToggleRow(t.id)}
-                      aria-label={`Select transaction${t.note ? ` ${t.note}` : ""}`}
+                      onChange={() => selection.onToggleRow(tx.id)}
+                      aria-label={t("selectTransaction", { note: tx.note ?? "" })}
                     />
                   </td>
                 )}
                 <td className="whitespace-nowrap px-4 py-3 text-text-secondary">
-                  {formatDate(t.date)}
+                  {formatDate(tx.date, locale)}
                 </td>
                 <td
                   className="max-w-55 truncate px-4 py-3 text-text-primary"
-                  title={t.note || undefined}
+                  title={tx.note || undefined}
                 >
-                  {t.note || <span className="text-text-muted">—</span>}
+                  {tx.note || <span className="text-text-muted">—</span>}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
                   <span className="inline-flex items-center gap-1.5 text-text-secondary">
                     <span
                       className="h-2 w-2 shrink-0 rounded-full"
                       style={{
-                        background: `var(--series-${categorySlot(t.category)})`,
+                        background: `var(--series-${categorySlot(tx.category)})`,
                       }}
                     />
                     <CategoryIcon
@@ -156,28 +164,28 @@ export function TransactionTable({
                       strokeWidth={2}
                       aria-hidden
                     />
-                    {t.category}
+                    {tCategories(tx.category)}
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-text-secondary">
-                  {t.kind === "transfer" ? (
+                  {tx.kind === "transfer" ? (
                     <span>
-                      {walletName(wallets, t.walletId)}{" "}
+                      {walletName(wallets, tx.walletId, t("deletedWallet"))}{" "}
                       <span className="text-text-muted">→</span>{" "}
-                      {walletName(wallets, t.toWalletId)}
+                      {walletName(wallets, tx.toWalletId, t("deletedWallet"))}
                     </span>
                   ) : (
-                    walletName(wallets, t.walletId)
+                    walletName(wallets, tx.walletId, t("deletedWallet"))
                   )}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3">
-                  <KindBadge kind={t.kind} />
+                  <KindBadge kind={tx.kind} />
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
-                  <AmountCell transaction={t} />
+                  <AmountCell transaction={tx} />
                 </td>
                 <td className="whitespace-nowrap px-2 py-3">
-                  <TransactionRowActions transaction={t} wallets={wallets} />
+                  <TransactionRowActions transaction={tx} wallets={wallets} />
                 </td>
               </tr>
             );

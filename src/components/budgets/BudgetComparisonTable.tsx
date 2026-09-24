@@ -1,3 +1,6 @@
+"use client";
+
+import { useLocale, useTranslations } from "next-intl";
 import { Target } from "lucide-react";
 import { EmptyState, cx } from "@/components/ui";
 import { categoryIcon, categorySlot } from "@/lib/categories";
@@ -7,6 +10,7 @@ import type { BudgetSelection } from "./BudgetTable";
 
 /** A right-aligned money cell. Renders a muted dash when the month had no budget for the category. */
 function Money({ value, over, divider }: { value?: number; over?: boolean; divider?: boolean }) {
+  const locale = useLocale();
   return (
     <td
       className={cx(
@@ -15,19 +19,20 @@ function Money({ value, over, divider }: { value?: number; over?: boolean; divid
         divider && "border-l border-border",
       )}
     >
-      {value === undefined ? <span className="text-text-muted">—</span> : formatCurrency(value)}
+      {value === undefined ? <span className="text-text-muted">—</span> : formatCurrency(value, "BDT", locale)}
     </td>
   );
 }
 
 /** Signed spend difference (base − compare). Spending less than the compared month reads as good. */
 function SpentDelta({ value }: { value: number }) {
+  const locale = useLocale();
   if (Math.abs(value) < 0.005) return <span className="text-text-muted">—</span>;
   const up = value > 0;
   return (
     <span className={up ? "text-status-critical" : "text-status-good"}>
       {up ? "+" : "-"}
-      {formatCurrency(Math.abs(value))}
+      {formatCurrency(Math.abs(value), "BDT", locale)}
     </span>
   );
 }
@@ -43,12 +48,16 @@ export function BudgetComparisonTable({
   compareLabel: string;
   selection?: BudgetSelection;
 }) {
+  const t = useTranslations("Budgets");
+  const tCommon = useTranslations("Common");
+  const tCategories = useTranslations("Categories");
+  const locale = useLocale();
   if (rows.length === 0) {
     return (
       <EmptyState
         icon={Target}
-        title="Nothing to compare"
-        description={`Neither ${baseLabel} nor ${compareLabel} has a budget yet.`}
+        title={t("nothingToCompare")}
+        description={t("nothingToCompareDesc", { base: baseLabel, compare: compareLabel })}
       />
     );
   }
@@ -86,12 +95,12 @@ export function BudgetComparisonTable({
                     if (el) el.indeterminate = someSelected;
                   }}
                   onChange={(e) => selection.onToggleAll(e.target.checked)}
-                  aria-label="Count every category toward the totals"
+                  aria-label={t("countEveryCategory")}
                 />
               </th>
             )}
             <th rowSpan={2} className="border-b border-border px-4 py-3 align-bottom font-medium">
-              Category
+              {tCommon("category")}
             </th>
             <th colSpan={2} className="border-b border-l border-border px-4 py-2 text-center font-medium">
               {baseLabel}
@@ -100,14 +109,14 @@ export function BudgetComparisonTable({
               {compareLabel}
             </th>
             <th rowSpan={2} className="border-b border-l border-border px-4 py-3 text-right align-bottom font-medium">
-              Δ Spent
+              {t("deltaSpent")}
             </th>
           </tr>
           <tr className="text-left text-[11px] uppercase tracking-wide text-text-muted">
-            <th className="border-b border-l border-border px-4 py-2 text-right font-medium">Budget</th>
-            <th className="border-b border-border px-4 py-2 text-right font-medium">Spent</th>
-            <th className="border-b border-l border-border px-4 py-2 text-right font-medium">Budget</th>
-            <th className="border-b border-border px-4 py-2 text-right font-medium">Spent</th>
+            <th className="border-b border-l border-border px-4 py-2 text-right font-medium">{t("budget")}</th>
+            <th className="border-b border-border px-4 py-2 text-right font-medium">{t("spent")}</th>
+            <th className="border-b border-l border-border px-4 py-2 text-right font-medium">{t("budget")}</th>
+            <th className="border-b border-border px-4 py-2 text-right font-medium">{t("spent")}</th>
           </tr>
         </thead>
         <tbody>
@@ -129,7 +138,7 @@ export function BudgetComparisonTable({
                       className="h-3.5 w-3.5 cursor-pointer accent-brand align-middle"
                       checked={isIn}
                       onChange={() => selection.onToggleRow(row.category)}
-                      aria-label={`Count ${row.category} toward the totals`}
+                      aria-label={t("countCategory", { category: tCategories(row.category) })}
                     />
                   </td>
                 )}
@@ -140,7 +149,7 @@ export function BudgetComparisonTable({
                       style={{ background: `var(--series-${categorySlot(row.category)})` }}
                     />
                     <CategoryIcon className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-                    {row.category}
+                    {tCategories(row.category)}
                   </span>
                 </td>
                 <Money value={row.base?.budgeted} divider />
@@ -157,15 +166,15 @@ export function BudgetComparisonTable({
         <tfoot>
           <tr className="border-t-2 border-border font-medium text-text-primary">
             {selection && <td className="px-4 py-3" />}
-            <td className="px-4 py-3">Total</td>
+            <td className="px-4 py-3">{tCommon("total")}</td>
             <td className="border-l border-border px-4 py-3 text-right tabular-nums">
-              {formatCurrency(totals.baseBudgeted)}
+              {formatCurrency(totals.baseBudgeted, "BDT", locale)}
             </td>
-            <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(totals.baseSpent)}</td>
+            <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(totals.baseSpent, "BDT", locale)}</td>
             <td className="border-l border-border px-4 py-3 text-right tabular-nums">
-              {formatCurrency(totals.compareBudgeted)}
+              {formatCurrency(totals.compareBudgeted, "BDT", locale)}
             </td>
-            <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(totals.compareSpent)}</td>
+            <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(totals.compareSpent, "BDT", locale)}</td>
             <td className="border-l border-border px-4 py-3 text-right tabular-nums">
               <SpentDelta value={totals.baseSpent - totals.compareSpent} />
             </td>

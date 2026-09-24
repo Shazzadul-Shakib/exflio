@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getCurrentUser, requireUser } from "@/lib/session";
 import { getUserWallets, getWallet, getTransactionsPage, getWalletFlowTotals } from "@/lib/queries";
 import { WALLET_TYPE_META } from "@/lib/categories";
@@ -12,11 +13,17 @@ import { FilterBar } from "@/components/transactions/FilterBar";
 import { TransactionList } from "@/components/transactions/TransactionList";
 import { Card } from "@/components/ui";
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string; locale: string }>;
+}): Promise<Metadata> {
+  const { id, locale } = await params;
   const user = await getCurrentUser();
   const wallet = user ? await getWallet(user.id, id) : null;
-  return { title: wallet ? `${wallet.name} — Extrack` : "Wallet — Extrack" };
+  if (wallet) return { title: `${wallet.name} — Extrack` };
+  const t = await getTranslations({ locale, namespace: "Wallets" });
+  return { title: `${t("walletFallbackTitle")} — Extrack` };
 }
 
 export default async function WalletDetailPage({
@@ -28,10 +35,14 @@ export default async function WalletDetailPage({
 }) {
   const user = await requireUser();
   const { id } = await params;
-  const [wallet, allWallets, rawParams] = await Promise.all([
+  const [wallet, allWallets, rawParams, t, tWalletTypes, tCommon, locale] = await Promise.all([
     getWallet(user.id, id),
     getUserWallets(user.id),
     searchParams,
+    getTranslations("Wallets"),
+    getTranslations("WalletTypes"),
+    getTranslations("Common"),
+    getLocale(),
   ]);
 
   if (!wallet) notFound();
@@ -64,17 +75,17 @@ export default async function WalletDetailPage({
                   className="rounded-full px-2 py-0.5 text-[11.5px] font-medium"
                   style={{ background: `color-mix(in oklab, ${color} 14%, transparent)`, color }}
                 >
-                  {meta.label}
+                  {tWalletTypes(wallet.type)}
                 </span>
                 {wallet.archived && (
                   <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11.5px] font-medium text-text-muted">
-                    Archived
+                    {tCommon("archived")}
                   </span>
                 )}
               </div>
               {wallet.note && <p className="mt-0.5 text-[13px] text-text-muted">{wallet.note}</p>}
               <p className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">
-                {formatCurrency(wallet.balance, wallet.currency)}
+                {formatCurrency(wallet.balance, wallet.currency, locale)}
               </p>
             </div>
           </div>
@@ -83,19 +94,19 @@ export default async function WalletDetailPage({
 
         <div className="mt-5 grid grid-cols-2 gap-4 border-t border-border pt-4 sm:w-72">
           <div>
-            <p className="text-[12px] uppercase tracking-wide text-text-muted">Total in</p>
-            <p className="text-[15px] font-semibold text-status-good">+{formatCurrency(inflow, wallet.currency)}</p>
+            <p className="text-[12px] uppercase tracking-wide text-text-muted">{t("totalIn")}</p>
+            <p className="text-[15px] font-semibold text-status-good">+{formatCurrency(inflow, wallet.currency, locale)}</p>
           </div>
           <div>
-            <p className="text-[12px] uppercase tracking-wide text-text-muted">Total out</p>
-            <p className="text-[15px] font-semibold text-status-critical">-{formatCurrency(outflow, wallet.currency)}</p>
+            <p className="text-[12px] uppercase tracking-wide text-text-muted">{t("totalOut")}</p>
+            <p className="text-[15px] font-semibold text-status-critical">-{formatCurrency(outflow, wallet.currency, locale)}</p>
           </div>
         </div>
       </Card>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-sm font-semibold text-text-primary">History</h3>
-        <AddTransactionButton wallets={allWallets} defaultWalletId={wallet.id} label="Add transaction" />
+        <h3 className="text-sm font-semibold text-text-primary">{t("history")}</h3>
+        <AddTransactionButton wallets={allWallets} defaultWalletId={wallet.id} />
       </div>
 
       <FilterBar />

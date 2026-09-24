@@ -1,15 +1,24 @@
 import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireUser } from "@/lib/session";
 import { getUserBudgets, getUserTransactions, getUserWallets } from "@/lib/queries";
 import { budgetProgress } from "@/lib/finance";
-import { currentYearMonth, monthLabel, shiftYearMonth } from "@/lib/format";
+import { currentYearMonth, formatNumber, monthLabel, monthLabelShort, shiftYearMonth } from "@/lib/format";
 import { MonthYearPicker } from "@/components/dashboard/MonthYearPicker";
 import { BudgetResults } from "@/components/budgets/BudgetResults";
 import { CreateBudgetButton } from "@/components/budgets/CreateBudgetButton";
 import { CompareToggle } from "@/components/budgets/CompareToggle";
 import { SwapMonthsButton } from "@/components/budgets/SwapMonthsButton";
 
-export const metadata: Metadata = { title: "Budgets — Extrack" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Budgets" });
+  return { title: `${t("pageTitle")} — Extrack` };
+}
 
 export default async function BudgetsPage({
   searchParams,
@@ -17,6 +26,11 @@ export default async function BudgetsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const user = await requireUser();
+  const [t, tMonthYearPicker, locale] = await Promise.all([
+    getTranslations("Budgets"),
+    getTranslations("MonthYearPicker"),
+    getLocale(),
+  ]);
   const params = await searchParams;
   const defaults = currentYearMonth();
   const year = Number(params.year) || defaults.year;
@@ -36,20 +50,20 @@ export default async function BudgetsPage({
   const baseRows = budgetProgress(transactions, budgets, wallets, year, month);
   const compareRows = compare ? budgetProgress(transactions, budgets, wallets, compareYear, compareMonth) : [];
 
-  const baseLabel = `${monthLabel(month)} ${year}`;
-  const compareLabel = `${monthLabel(compareMonth)} ${compareYear}`;
-  const compareShort = `${monthLabel(compareMonth).slice(0, 3)} ${compareYear}`;
+  const baseLabel = `${monthLabel(month, locale)} ${formatNumber(year, locale)}`;
+  const compareLabel = `${monthLabel(compareMonth, locale)} ${formatNumber(compareYear, locale)}`;
+  const compareShort = `${monthLabelShort(compareMonth, locale)} ${formatNumber(compareYear, locale)}`;
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight text-text-primary">Budgets</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-text-primary">{t("pageTitle")}</h2>
             <p className="text-[13px] text-text-muted">
               {compare
-                ? `Comparing ${baseLabel} against ${compareLabel}.`
-                : `Set what you plan to spend per category, and see how ${baseLabel} is tracking.`}
+                ? t("pageDescComparing", { base: baseLabel, compare: compareLabel })
+                : t("pageDescDefault", { base: baseLabel })}
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -73,13 +87,13 @@ export default async function BudgetsPage({
                 compareYear={compareYear}
                 compareMonth={compareMonth}
               />
-              <span className="text-[13px] text-text-muted">vs</span>
+              <span className="text-[13px] text-text-muted">{t("vs")}</span>
               <MonthYearPicker
                 year={compareYear}
                 month={compareMonth}
                 yearKey="cy"
                 monthKey="cm"
-                ariaPrefix="Comparison"
+                ariaPrefix={tMonthYearPicker("comparison")}
               />
             </div>
           )}

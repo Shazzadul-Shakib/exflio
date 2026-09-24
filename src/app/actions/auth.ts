@@ -1,6 +1,7 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
+import { redirect } from "@/i18n/navigation";
 import { createSessionCookie, clearSessionCookie } from "@/lib/session";
 import { authenticate, createUser } from "@/lib/users";
 import { createWallet } from "@/lib/mutations";
@@ -19,11 +20,12 @@ export async function signupAction(_prevState: AuthFormState, formData: FormData
   const name = str(formData, "name");
   const email = str(formData, "email");
   const password = str(formData, "password");
+  const t = await getTranslations("Auth.errors");
 
   const fieldErrors: Record<string, string> = {};
-  if (name.length < 2) fieldErrors.name = "Enter your full name.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fieldErrors.email = "Enter a valid email address.";
-  if (password.length < 8) fieldErrors.password = "Use at least 8 characters.";
+  if (name.length < 2) fieldErrors.name = t("nameRequired");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fieldErrors.email = t("emailInvalid");
+  if (password.length < 8) fieldErrors.password = t("passwordTooShort");
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
   let userId: string;
@@ -31,7 +33,7 @@ export async function signupAction(_prevState: AuthFormState, formData: FormData
     const user = await createUser({ name, email, password });
     userId = user.id;
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Could not create your account." };
+    return { error: error instanceof Error ? error.message : t("createAccountFailed") };
   }
 
   await Promise.all([
@@ -42,23 +44,26 @@ export async function signupAction(_prevState: AuthFormState, formData: FormData
   ]);
 
   await createSessionCookie(userId);
-  redirect("/dashboard");
+  redirect({ href: "/dashboard", locale: await getLocale() });
+  throw new Error("unreachable");
 }
 
 export async function loginAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = str(formData, "email");
   const password = str(formData, "password");
+  const t = await getTranslations("Auth.errors");
 
-  if (!email || !password) return { error: "Enter your email and password." };
+  if (!email || !password) return { error: t("emailPasswordRequired") };
 
   const user = await authenticate(email, password);
-  if (!user) return { error: "That email and password don't match." };
+  if (!user) return { error: t("invalidCredentials") };
 
   await createSessionCookie(user.id);
-  redirect("/dashboard");
+  redirect({ href: "/dashboard", locale: await getLocale() });
+  throw new Error("unreachable");
 }
 
 export async function logoutAction(): Promise<void> {
   await clearSessionCookie();
-  redirect("/login");
+  redirect({ href: "/login", locale: await getLocale() });
 }

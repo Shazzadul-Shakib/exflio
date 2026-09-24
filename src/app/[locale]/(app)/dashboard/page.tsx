@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { CreditCard, PiggyBank, Target, TrendingDown, Wallet as WalletIcon } from "lucide-react";
 import { requireUser } from "@/lib/session";
 import { getUserWallets, getUserTransactions, getUserBudgets } from "@/lib/queries";
@@ -17,7 +18,7 @@ import {
   budgetProgress,
   type TrendRange,
 } from "@/lib/finance";
-import { currentYearMonth, shiftYearMonth, monthLabel } from "@/lib/format";
+import { currentYearMonth, shiftYearMonth, monthLabel, formatNumber } from "@/lib/format";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { ToggleStatCard } from "@/components/dashboard/ToggleStatCard";
 import { CategoryBarChart } from "@/components/dashboard/CategoryBarChart";
@@ -32,7 +33,15 @@ import { BudgetProgressChart } from "@/components/budgets/BudgetProgressChart";
 import { CreateBudgetButton } from "@/components/budgets/CreateBudgetButton";
 import { Card, EmptyState } from "@/components/ui";
 
-export const metadata: Metadata = { title: "Dashboard — Extrack" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Dashboard" });
+  return { title: `${t("pageTitle")} — Extrack` };
+}
 
 const TREND_RANGES: TrendRange[] = ["week", "month", "last-month", "6-months"];
 
@@ -47,6 +56,11 @@ export default async function DashboardPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const user = await requireUser();
+  const [t, tCommon, locale] = await Promise.all([
+    getTranslations("Dashboard"),
+    getTranslations("Common"),
+    getLocale(),
+  ]);
   const params = await searchParams;
   const defaults = currentYearMonth();
   const year = Number(params.year) || defaults.year;
@@ -98,7 +112,7 @@ export default async function DashboardPage({
   const expensesThisMonth = current.expense - savingsReversal - savingsWithdrawal;
   const prevExpensesThisMonth = previous.expense - prevSavingsReversal - prevSavingsWithdrawal;
   const categories = spendingBreakdown(transactions, walletsWithDeleted, year, month);
-  const trend = incomeExpenseTrend(transactions, year, month, trendRange);
+  const trend = incomeExpenseTrend(transactions, year, month, trendRange, locale);
   const budgetRows = budgetProgress(transactions, budgets, walletsWithDeleted, year, month);
   const recent = [...transactions].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)).slice(0, 6);
 
@@ -112,15 +126,15 @@ export default async function DashboardPage({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold tracking-tight text-text-primary">
-            Welcome back, {user.name.split(" ")[0]}
+            {t("welcomeBack", { name: user.name.split(" ")[0] })}
           </h2>
           <p className="text-[13px] text-text-muted">
-            Here&apos;s how {monthLabel(month)} {year} looks so far.
+            {t("lookingSoFar", { month: monthLabel(month, locale), year: formatNumber(year, locale) })}
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <MonthYearPicker year={year} month={month} className="w-full sm:w-auto" />
-          <AddTransactionButton wallets={activeWallets} label="Add" className="w-full sm:w-auto" />
+          <AddTransactionButton wallets={activeWallets} label={tCommon("add")} className="w-full sm:w-auto" />
         </div>
       </div>
 
@@ -128,39 +142,41 @@ export default async function DashboardPage({
         <ToggleStatCard
           icon={<WalletIcon className="h-4 w-4" strokeWidth={2} />}
           accent="brand"
+          locale={locale}
           views={[
             {
               key: "all",
-              toggle: "All",
-              label: "Net worth",
+              toggle: t("toggleAll"),
+              label: t("netWorth"),
               value: netWorth(wallets),
-              hint: "Assets minus debt",
+              hint: t("assetsMinusDebt"),
             },
             {
               key: "excl-savings",
-              toggle: "Excl. savings",
-              label: "Net worth excl. savings",
+              toggle: t("toggleExclSavings"),
+              label: t("netWorthExclSavings"),
               value: netWorth(wallets) - totalSavings(wallets),
-              hint: "Cash & bank, minus debt",
+              hint: t("cashAndBankMinusDebt"),
             },
           ]}
         />
         <ToggleStatCard
           icon={<TrendingDown className="h-4 w-4" strokeWidth={2} />}
           accent="critical"
+          locale={locale}
           views={[
             {
               key: "all",
-              toggle: "All",
-              label: "Expenses this month",
+              toggle: t("toggleAll"),
+              label: t("expensesThisMonth"),
               value: expensesThisMonth,
               delta: pct(expensesThisMonth, prevExpensesThisMonth),
               deltaGoodDirection: "down",
             },
             {
               key: "excl-savings",
-              toggle: "Excl. savings",
-              label: "Expenses excl. savings",
+              toggle: t("toggleExclSavings"),
+              label: t("expensesExclSavings"),
               value: current.expense - savingsContribution,
               delta: pct(current.expense - savingsContribution, previous.expense - prevSavingsContribution),
               deltaGoodDirection: "down",
@@ -170,31 +186,32 @@ export default async function DashboardPage({
         <ToggleStatCard
           icon={<PiggyBank className="h-4 w-4" strokeWidth={2} />}
           accent="good"
+          locale={locale}
           views={[
             {
               key: "total",
-              toggle: "Total",
-              label: "Total savings",
+              toggle: t("toggleTotal"),
+              label: t("totalSavings"),
               value: totalSavings(wallets),
-              hint: `${savingsWallets.length} wallet${savingsWallets.length === 1 ? "" : "s"}`,
+              hint: tCommon("walletCount", { count: savingsWallets.length }),
             },
             {
               key: "this-month",
-              toggle: "This month",
-              label: "Saved this month",
+              toggle: t("toggleThisMonth"),
+              label: t("savedThisMonth"),
               value: netSavingsThisMonth,
               delta: pct(netSavingsThisMonth, prevNetSavingsThisMonth),
               deltaGoodDirection: "up",
             },
           ]}
         />
-        <StatCard label="Total debt" value={totalDebt(wallets)} icon={CreditCard} accent="critical" hint={`${debtWallets.length} wallet${debtWallets.length === 1 ? "" : "s"}`} />
+        <StatCard label={t("totalDebt")} value={totalDebt(wallets)} icon={CreditCard} accent="critical" locale={locale} hint={tCommon("walletCount", { count: debtWallets.length })} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <Card className="p-5 lg:col-span-3">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-text-primary">Income vs. expense</h3>
+            <h3 className="text-sm font-semibold text-text-primary">{t("incomeVsExpense")}</h3>
             <TrendRangeSelect value={trendRange} />
           </div>
           <TrendChart data={trend} />
@@ -202,9 +219,9 @@ export default async function DashboardPage({
 
         <Card className="p-5 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-text-primary">Spending by category</h3>
+            <h3 className="text-sm font-semibold text-text-primary">{t("spendingByCategory")}</h3>
             <span className="text-[12.5px] text-text-muted">
-              {monthLabel(month)} {year}
+              {monthLabel(month, locale)} {formatNumber(year, locale)}
             </span>
           </div>
           <CategoryBarChart data={categories} />
@@ -214,19 +231,19 @@ export default async function DashboardPage({
       <div>
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <h3 className="text-sm font-semibold text-text-primary">Budget vs. expense</h3>
+            <h3 className="text-sm font-semibold text-text-primary">{t("budgetVsExpense")}</h3>
             <Link href="/budgets" className="text-[13px] font-medium text-brand hover:underline">
-              View all →
+              {tCommon("viewAll")} →
             </Link>
           </div>
-          <CreateBudgetButton label="Add budget" budgets={budgets} defaultYear={year} defaultMonth={month} />
+          <CreateBudgetButton label={t("addBudget")} budgets={budgets} defaultYear={year} defaultMonth={month} />
         </div>
         {budgetRows.length === 0 ? (
           <EmptyState
             icon={Target}
-            title="No budgets set for this month"
-            description="Create a budget per category to compare planned spending against what actually goes out."
-            action={<CreateBudgetButton label="Create a budget" budgets={budgets} defaultYear={year} defaultMonth={month} />}
+            title={t("noBudgetsTitle")}
+            description={t("noBudgetsDesc")}
+            action={<CreateBudgetButton label={t("createBudget")} budgets={budgets} defaultYear={year} defaultMonth={month} />}
           />
         ) : (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
@@ -242,13 +259,13 @@ export default async function DashboardPage({
 
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">Your wallets</h3>
+          <h3 className="text-sm font-semibold text-text-primary">{t("yourWallets")}</h3>
           <Link href="/wallets" className="text-[13px] font-medium text-brand hover:underline">
-            View all →
+            {tCommon("viewAll")} →
           </Link>
         </div>
         {walletPreview.length === 0 ? (
-          <EmptyState icon={WalletIcon} title="No wallets yet" description="Create a wallet to start tracking your money." />
+          <EmptyState icon={WalletIcon} title={t("noWalletsTitle")} description={t("noWalletsDesc")} />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {walletPreview.map((w) => (
@@ -260,9 +277,9 @@ export default async function DashboardPage({
 
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">Recent transactions</h3>
+          <h3 className="text-sm font-semibold text-text-primary">{t("recentTransactions")}</h3>
           <Link href="/transactions" className="text-[13px] font-medium text-brand hover:underline">
-            View all →
+            {tCommon("viewAll")} →
           </Link>
         </div>
         <TransactionTable transactions={recent} wallets={walletsWithDeleted} />

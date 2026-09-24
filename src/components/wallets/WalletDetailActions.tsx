@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { AlertCircle, CircleDollarSign, Pencil, Trash2 } from "lucide-react";
 import {
   updateWalletAction,
@@ -27,6 +28,8 @@ function EditWalletForm({
   wallet: Wallet;
   onSuccess: () => void;
 }) {
+  const t = useTranslations("Wallets");
+  const tCommon = useTranslations("Common");
   const action = updateWalletAction.bind(null, wallet.id);
   const [state, formAction, pending] = useActionState(action, initialState);
 
@@ -38,13 +41,13 @@ function EditWalletForm({
   return (
     <form action={formAction} noValidate className="flex flex-col gap-4">
       <Field
-        label="Wallet name"
+        label={t("walletName")}
         htmlFor="edit-name"
         error={state.fieldErrors?.name}
       >
         <Input id="edit-name" name="name" defaultValue={wallet.name} required />
       </Field>
-      <Field label="Note" htmlFor="edit-note">
+      <Field label={tCommon("noteOptional")} htmlFor="edit-note">
         <Input
           id="edit-note"
           name="note"
@@ -62,7 +65,7 @@ function EditWalletForm({
         </p>
       )}
       <Button type="submit" loading={pending} className="mt-1 w-full">
-        {pending ? "Saving…" : "Save changes"}
+        {pending ? tCommon("saving") : tCommon("saveChanges")}
       </Button>
     </form>
   );
@@ -77,6 +80,9 @@ function ClearDebtForm({
   wallets: Wallet[];
   onSuccess: () => void;
 }) {
+  const t = useTranslations("Wallets");
+  const tCommon = useTranslations("Common");
+  const locale = useLocale();
   const [state, formAction, pending] = useActionState(createTransactionAction, initialClearState);
   const [mode, setMode] = useState<"full" | "partial">("full");
   const [partialAmount, setPartialAmount] = useState(wallet.balance);
@@ -93,9 +99,9 @@ function ClearDebtForm({
   const overDebt = amount > wallet.balance;
   const insufficientFunds = !!payFromWallet && amount > payFromWallet.balance;
   const amountError = overDebt
-    ? `You only owe ${formatCurrency(wallet.balance, wallet.currency)}.`
+    ? t("youOnlyOwe", { amount: formatCurrency(wallet.balance, wallet.currency, locale) })
     : insufficientFunds
-      ? `Only ${formatCurrency(payFromWallet!.balance, payFromWallet!.currency)} available in ${payFromWallet!.name}.`
+      ? t("onlyAvailable", { amount: formatCurrency(payFromWallet!.balance, payFromWallet!.currency, locale), name: payFromWallet!.name })
       : undefined;
 
   return (
@@ -106,15 +112,17 @@ function ClearDebtForm({
       <input type="hidden" name="date" value={todayIso()} />
 
       <p className="text-[13px] text-text-secondary">
-        You owe{" "}
-        <span className="font-medium text-text-primary">{formatCurrency(wallet.balance, wallet.currency)}</span> on{" "}
-        <span className="font-medium text-text-primary">{wallet.name}</span>.
+        {t.rich("youOwe", {
+          amount: formatCurrency(wallet.balance, wallet.currency, locale),
+          name: wallet.name,
+          b: (chunks) => <span className="font-medium text-text-primary">{chunks}</span>,
+        })}
       </p>
 
       <div className="grid grid-cols-2 gap-2">
         {([
-          { value: "full", label: "Full clear" },
-          { value: "partial", label: "Partial clear" },
+          { value: "full", label: t("fullClear") },
+          { value: "partial", label: t("partialClear") },
         ] as const).map((opt) => (
           <label
             key={opt.value}
@@ -137,7 +145,7 @@ function ClearDebtForm({
         ))}
       </div>
 
-      <Field label="Amount" htmlFor="clear-amount" error={state.fieldErrors?.amount ?? amountError}>
+      <Field label={t("amount")} htmlFor="clear-amount" error={state.fieldErrors?.amount ?? amountError}>
         <Input
           id="clear-amount"
           name="amount"
@@ -153,23 +161,23 @@ function ClearDebtForm({
         />
       </Field>
 
-      <Field label="Pay from wallet" htmlFor="clear-walletId" error={state.fieldErrors?.walletId}>
+      <Field label={t("payFromWallet")} htmlFor="clear-walletId" error={state.fieldErrors?.walletId}>
         <Select id="clear-walletId" name="walletId" value={payFromId} onChange={(e) => setPayFromId(e.target.value)} required>
           <option value="" disabled>
-            Choose a wallet
+            {tCommon("chooseWallet")}
           </option>
           {sourceWallets.map((w) => (
-            <option key={w.id} value={w.id}>{`${w.name} (${walletBalanceLabel(w)})`}</option>
+            <option key={w.id} value={w.id}>{`${w.name} (${walletBalanceLabel(w, t, locale)})`}</option>
           ))}
         </Select>
       </Field>
 
-      <Field label="Note (optional)" htmlFor="clear-note">
-        <Input id="clear-note" name="note" placeholder="e.g. Credit card payment" defaultValue="Debt clearance" maxLength={140} />
+      <Field label={tCommon("noteOptional")} htmlFor="clear-note">
+        <Input id="clear-note" name="note" placeholder={t("clearNotePlaceholder")} defaultValue={t("debtClearanceDefault")} maxLength={140} />
       </Field>
 
       {sourceWallets.length === 0 && (
-        <p className="text-[12.5px] text-text-muted">Add a cash, bank, or savings wallet to pay this debt from.</p>
+        <p className="text-[12.5px] text-text-muted">{t("noSourceWallets")}</p>
       )}
 
       {state.error && (
@@ -188,13 +196,16 @@ function ClearDebtForm({
         disabled={sourceWallets.length === 0 || amount <= 0 || overDebt || insufficientFunds}
         className="mt-1 w-full"
       >
-        {pending ? "Clearing…" : "Clear debt"}
+        {pending ? t("clearingDebt") : t("clearDebt")}
       </Button>
     </form>
   );
 }
 
 export function WalletDetailActions({ wallet, wallets }: { wallet: Wallet; wallets: Wallet[] }) {
+  const t = useTranslations("Wallets");
+  const tCommon = useTranslations("Common");
+  const locale = useLocale();
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
@@ -209,12 +220,12 @@ export function WalletDetailActions({ wallet, wallets }: { wallet: Wallet; walle
       {wallet.type === "debt" && wallet.balance > 0 && (
         <Button variant="outline" size="sm" onClick={() => setClearOpen(true)}>
           <CircleDollarSign className="h-3.5 w-3.5" strokeWidth={2} />
-          Clear debt
+          {t("clearDebt")}
         </Button>
       )}
       <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
         <Pencil className="h-3.5 w-3.5" strokeWidth={2} />
-        Edit
+        {tCommon("edit")}
       </Button>
       <Button
         variant="outline"
@@ -226,17 +237,17 @@ export function WalletDetailActions({ wallet, wallets }: { wallet: Wallet; walle
         className="hover:bg-status-critical-soft! hover:text-status-critical!"
       >
         <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
-        Delete
+        {tCommon("delete")}
       </Button>
 
-      <Modal open={clearOpen} onClose={() => setClearOpen(false)} title="Clear debt">
+      <Modal open={clearOpen} onClose={() => setClearOpen(false)} title={t("clearDebtTitle")}>
         <ClearDebtForm wallet={wallet} wallets={wallets} onSuccess={() => setClearOpen(false)} />
       </Modal>
 
       <Modal
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        title="Edit wallet"
+        title={t("editWallet")}
       >
         <EditWalletForm wallet={wallet} onSuccess={() => setEditOpen(false)} />
       </Modal>
@@ -244,25 +255,23 @@ export function WalletDetailActions({ wallet, wallets }: { wallet: Wallet; walle
       <Modal
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        title="Delete wallet"
+        title={t("deleteWalletTitle")}
       >
         {isEmpty ? (
           <p className="text-sm text-text-secondary">
-            This removes{" "}
-            <span className="font-medium text-text-primary">{wallet.name}</span>{" "}
-            from your wallet lists and pickers. Its transaction history stays in
-            place — every past transaction still shows up on the Transactions
-            page and in your totals.
+            {t.rich("deleteEmptyWalletDesc", {
+              name: wallet.name,
+              b: (chunks) => <span className="font-medium text-text-primary">{chunks}</span>,
+            })}
           </p>
         ) : (
           <p className="text-sm text-text-secondary">
-            <span className="font-medium text-text-primary">{wallet.name}</span>{" "}
-            still holds{" "}
-            <span className="font-medium text-text-primary">
-              {formatCurrency(wallet.balance, wallet.currency)}
-            </span>
-            . {wallet.type === "debt" ? "Pay it off to zero" : "Move or withdraw the balance"}{" "}
-            first — only an empty wallet can be deleted.
+            {t.rich("deleteNonEmptyWalletDesc", {
+              name: wallet.name,
+              amount: formatCurrency(wallet.balance, wallet.currency, locale),
+              action: wallet.type === "debt" ? t("payItOff") : t("moveOrWithdraw"),
+              b: (chunks) => <span className="font-medium text-text-primary">{chunks}</span>,
+            })}
           </p>
         )}
         {deleteError && (
@@ -276,7 +285,7 @@ export function WalletDetailActions({ wallet, wallets }: { wallet: Wallet; walle
         )}
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)}>
-            Cancel
+            {tCommon("cancel")}
           </Button>
           <Button
             variant="danger"
@@ -295,7 +304,7 @@ export function WalletDetailActions({ wallet, wallets }: { wallet: Wallet; walle
               });
             }}
           >
-            {isPending ? "Deleting…" : "Delete wallet"}
+            {isPending ? tCommon("deleting") : t("deleteWallet")}
           </Button>
         </div>
       </Modal>

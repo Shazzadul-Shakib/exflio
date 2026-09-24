@@ -19,6 +19,7 @@ export function StatCard({
   /** Trailing text after the delta percentage. Defaults to the dashboard's month-over-month wording. */
   deltaLabel = "vs last month",
   hint,
+  locale = "en",
 }: {
   label: string;
   value: number;
@@ -28,6 +29,7 @@ export function StatCard({
   deltaGoodDirection?: "up" | "down";
   deltaLabel?: string;
   hint?: string;
+  locale?: string;
 }) {
   const hasDelta =
     typeof delta === "number" && Number.isFinite(delta) && delta !== 0;
@@ -54,7 +56,7 @@ export function StatCard({
       </div>
       <div className="flex items-baseline gap-2">
         <span className="text-2xl font-semibold tracking-tight text-text-primary">
-          {formatCompactCurrency(value)}
+          {formatCompactCurrency(value, "BDT", locale)}
         </span>
       </div>
       {hasDelta ? (

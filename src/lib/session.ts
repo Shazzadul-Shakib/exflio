@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
+import { redirect } from "@/i18n/navigation";
 import { signToken, verifyToken } from "./crypto";
 import { findUserById } from "./users";
 import type { PublicUser } from "./types";
@@ -52,6 +53,8 @@ export const getCurrentUser = cache(async (): Promise<PublicUser | null> => {
 /** Redirects to /login when there is no valid session. */
 export async function requireUser(): Promise<PublicUser> {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  return user;
+  if (user) return user;
+  const locale = await getLocale();
+  redirect({ href: "/login", locale });
+  throw new Error("unreachable");
 }
