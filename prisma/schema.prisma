@@ -42,7 +42,7 @@ model Wallet {
   name      String
   type      WalletType
   balance   Decimal    @default(0) @db.Decimal(14, 2)
-  currency  String     @default("USD")
+  currency  String     @default("BDT")
   note      String     @default("")
   archived  Boolean    @default(false)
   /// Set when the user deletes the wallet. A soft delete: the row and its

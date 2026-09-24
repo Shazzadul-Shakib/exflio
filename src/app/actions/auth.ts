@@ -35,10 +35,10 @@ export async function signupAction(_prevState: AuthFormState, formData: FormData
   }
 
   await Promise.all([
-    createWallet(userId, { name: "Cash", type: "cash", balance: 0, currency: "USD", note: "" }),
-    createWallet(userId, { name: "Main Bank", type: "bank", balance: 0, currency: "USD", note: "" }),
-    createWallet(userId, { name: "Savings", type: "savings", balance: 0, currency: "USD", note: "" }),
-    createWallet(userId, { name: "Credit Card", type: "debt", balance: 0, currency: "USD", note: "" }),
+    createWallet(userId, { name: "Cash", type: "cash", balance: 0, currency: "BDT", note: "" }),
+    createWallet(userId, { name: "Main Bank", type: "bank", balance: 0, currency: "BDT", note: "" }),
+    createWallet(userId, { name: "Savings", type: "savings", balance: 0, currency: "BDT", note: "" }),
+    createWallet(userId, { name: "Credit Card", type: "debt", balance: 0, currency: "BDT", note: "" }),
   ]);
 
   await createSessionCookie(userId);

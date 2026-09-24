@@ -84,7 +84,7 @@ export async function createWallet(
           name: input.name,
           type: input.type,
           balance: 0,
-          currency: input.currency || "USD",
+          currency: input.currency || "BDT",
           note: input.note,
         },
       });
@@ -116,7 +116,7 @@ export async function createWallet(
           name: input.name,
           type: input.type,
           balance: 0,
-          currency: input.currency || "USD",
+          currency: input.currency || "BDT",
           note: input.note,
         },
       });
@@ -141,7 +141,7 @@ export async function createWallet(
       name: input.name,
       type: input.type,
       balance: input.balance,
-      currency: input.currency || "USD",
+      currency: input.currency || "BDT",
       note: input.note,
     },
   });

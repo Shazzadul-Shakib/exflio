@@ -2,12 +2,13 @@ import type { WalletType } from "./types";
 
 const currencyFormatterCache = new Map<string, Intl.NumberFormat>();
 
-export function formatCurrency(amount: number, currency = "USD"): string {
+export function formatCurrency(amount: number, currency = "BDT"): string {
   let formatter = currencyFormatterCache.get(currency);
   if (!formatter) {
     formatter = new Intl.NumberFormat("en-US", {
       style: "currency",
       currency,
+      currencyDisplay: "narrowSymbol",
       maximumFractionDigits: 2,
     });
     currencyFormatterCache.set(currency, formatter);
@@ -15,13 +16,14 @@ export function formatCurrency(amount: number, currency = "USD"): string {
   return formatter.format(amount);
 }
 
-/** Compact form for stat tiles: 1,284 / 12.9K / $4.2M */
-export function formatCompactCurrency(amount: number, currency = "USD"): string {
+/** Compact form for stat tiles: 1,284 / 12.9K / ৳4.2M */
+export function formatCompactCurrency(amount: number, currency = "BDT"): string {
   const abs = Math.abs(amount);
   if (abs < 100_000) return formatCurrency(amount, currency);
   const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
+    currencyDisplay: "narrowSymbol",
     notation: "compact",
     maximumFractionDigits: 1,
   });

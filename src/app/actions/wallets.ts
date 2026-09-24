@@ -34,7 +34,7 @@ async function createWalletCore(formData: FormData): Promise<WalletFormState> {
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
   try {
-    const wallet = await createWallet(user.id, { name, type, balance, currency: "USD", note, fundingWalletId });
+    const wallet = await createWallet(user.id, { name, type, balance, currency: "BDT", note, fundingWalletId });
     return { success: true, wallet };
   } catch (error) {
     return { error: error instanceof MutationError ? error.message : "Could not create this wallet." };
