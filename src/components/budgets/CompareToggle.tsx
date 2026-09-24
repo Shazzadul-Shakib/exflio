@@ -1,6 +1,8 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { GitCompareArrows } from "lucide-react";
 import { cx } from "@/components/cx";
 import { shiftYearMonth } from "@/lib/format";
@@ -19,6 +21,7 @@ export function CompareToggle({
   baseYear: number;
   baseMonth: number;
 }) {
+  const t = useTranslations("Budgets");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -53,7 +56,7 @@ export function CompareToggle({
       )}
     >
       <GitCompareArrows className="h-4 w-4" strokeWidth={2} />
-      Compare
+      {t("compare")}
     </button>
   );
 }

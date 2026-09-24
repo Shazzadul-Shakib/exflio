@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link, usePathname } from "@/i18n/navigation";
 import { useFormStatus } from "react-dom";
 import { Loader2, LogOut, Menu } from "lucide-react";
 import { NAV_ITEMS } from "./nav-items";
@@ -10,8 +10,10 @@ import { logoutAction } from "@/app/actions/auth";
 import type { PublicUser } from "@/lib/types";
 import { cx } from "@/components/ui";
 import { Logomark } from "@/components/Logomark";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 function LogoutButton() {
+  const t = useTranslations("Nav");
   const { pending } = useFormStatus();
   return (
     <button
@@ -21,7 +23,7 @@ function LogoutButton() {
       className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-2 hover:text-status-critical disabled:pointer-events-none disabled:opacity-50"
     >
       {pending ? <Loader2 className="h-4.5 w-4.5 animate-spin" strokeWidth={2} /> : <LogOut className="h-4.5 w-4.5" strokeWidth={2} />}
-      {pending ? "Logging out…" : "Log out"}
+      {pending ? t("loggingOut") : t("logOut")}
     </button>
   );
 }
@@ -42,6 +44,7 @@ function NavLinks({
   pathname: string;
   onNavigate?: () => void;
 }) {
+  const t = useTranslations("Nav");
   return (
     <nav className="flex flex-col gap-1">
       {NAV_ITEMS.map((item) => {
@@ -61,7 +64,7 @@ function NavLinks({
             )}
           >
             <Icon className="h-4.5 w-4.5 shrink-0" strokeWidth={2} />
-            {item.label}
+            {t(item.key)}
           </Link>
         );
       })}
@@ -114,6 +117,8 @@ export function AppShell({
   user: PublicUser;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("Nav");
+  const tCommon = useTranslations("Common");
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const activeItem = NAV_ITEMS.find(
@@ -149,13 +154,14 @@ export function AppShell({
             type="button"
             onClick={() => setMobileOpen(true)}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-text-secondary hover:bg-surface-2 md:hidden"
-            aria-label="Open navigation"
+            aria-label={t("openNavigation")}
           >
             <Menu className="h-5 w-5" strokeWidth={2} />
           </button>
           <h1 className="text-sm font-semibold text-text-primary">
-            {activeItem?.label ?? "Extrack"}
+            {activeItem ? t(activeItem.key) : tCommon("brand")}
           </h1>
+          <LanguageSwitcher className="ml-auto" />
         </header>
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto w-full max-w-350">{children}</div>

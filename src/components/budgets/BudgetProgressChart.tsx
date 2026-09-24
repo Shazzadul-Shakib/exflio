@@ -1,13 +1,19 @@
+"use client";
+
+import { useLocale, useTranslations } from "next-intl";
 import { Target } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import { categoryIcon, categorySlot } from "@/lib/categories";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatNumber } from "@/lib/format";
 import type { BudgetProgress } from "@/lib/finance";
 
 export function BudgetProgressChart({ data }: { data: BudgetProgress[] }) {
+  const t = useTranslations("Budgets");
+  const tCategories = useTranslations("Categories");
+  const locale = useLocale();
   if (data.length === 0) {
     return (
-      <EmptyState icon={Target} title="No budgets yet" description="Create a budget to see your spending progress here." />
+      <EmptyState icon={Target} title={t("noBudgetsTitle")} description={t("noBudgetsProgressDesc")} />
     );
   }
 
@@ -23,10 +29,10 @@ export function BudgetProgressChart({ data }: { data: BudgetProgress[] }) {
             <div className="flex items-center justify-between gap-2 text-[13px]">
               <span className="flex min-w-0 items-center gap-1.5 font-medium text-text-primary">
                 <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-                <span className="truncate">{row.category}</span>
+                <span className="truncate">{tCategories(row.category)}</span>
               </span>
               <span className={`shrink-0 tabular-nums ${over ? "font-medium text-status-critical" : "text-text-secondary"}`}>
-                {formatCurrency(row.spent)} / {formatCurrency(row.budgeted)}
+                {formatCurrency(row.spent, "BDT", locale)} / {formatCurrency(row.budgeted, "BDT", locale)}
               </span>
             </div>
             <div className="relative h-2.5 rounded-full bg-surface-2">
@@ -39,7 +45,9 @@ export function BudgetProgressChart({ data }: { data: BudgetProgress[] }) {
               />
             </div>
             <span className={`text-[12px] ${over ? "text-status-critical" : "text-text-muted"}`}>
-              {over ? `${Math.round(row.pct - 100)}% over budget` : `${Math.round(row.pct)}% used`}
+              {over
+                ? t("overBudget", { pct: formatNumber(Math.round(row.pct - 100), locale) })
+                : t("percentUsed", { pct: formatNumber(Math.round(row.pct), locale) })}
             </span>
           </div>
         );

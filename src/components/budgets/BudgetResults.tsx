@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { PiggyBank, Target, TrendingDown, Undo2 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Card } from "@/components/ui";
 import { budgetTotals, compareBudgetProgress, type BudgetProgress } from "@/lib/finance";
-import { formatCompactCurrency } from "@/lib/format";
+import { formatCompactCurrency, formatNumber } from "@/lib/format";
 import type { Budget } from "@/lib/types";
 import { BudgetTable } from "./BudgetTable";
 import { BudgetComparisonTable } from "./BudgetComparisonTable";
@@ -41,6 +42,8 @@ export function BudgetResults({
   compareLabel: string;
   compareShort: string;
 }) {
+  const t = useTranslations("Budgets");
+  const locale = useLocale();
   const allCategories = useMemo(
     () => [...new Set([...baseRows, ...compareRows].map((r) => r.category))],
     [baseRows, compareRows],
@@ -85,40 +88,45 @@ export function BudgetResults({
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
-          label="Total budgeted"
+          label={t("totalBudgeted")}
           value={totals.budgeted}
           icon={Target}
           accent="brand"
+          locale={locale}
           hint={
             compare
-              ? `${compareShort}: ${formatCompactCurrency(compareTotals.budgeted)}`
-              : `${selectedBase.length} of ${baseRows.length} categor${baseRows.length === 1 ? "y" : "ies"} counted`
+              ? `${compareShort}: ${formatCompactCurrency(compareTotals.budgeted, "BDT", locale)}`
+              : t("categoriesCounted", { selectedDisplay: formatNumber(selectedBase.length, locale), total: baseRows.length })
           }
         />
         <StatCard
-          label="Total spent"
+          label={t("totalSpent")}
           value={totals.spent}
           icon={TrendingDown}
           accent="critical"
+          locale={locale}
           delta={compare ? pctChange(totals.spent, compareTotals.spent) : undefined}
           deltaGoodDirection="down"
           deltaLabel={`vs ${compareShort}`}
-          hint={overCount > 0 ? `${overCount} categor${overCount === 1 ? "y" : "ies"} over budget` : "All within budget"}
+          hint={overCount > 0 ? t("categoriesOverBudget", { count: overCount }) : t("allWithinBudget")}
         />
         <StatCard
-          label="Remaining"
+          label={t("remaining")}
           value={remaining}
           icon={PiggyBank}
           accent={remaining < 0 ? "critical" : "good"}
-          hint={compare ? `${compareShort}: ${formatCompactCurrency(compareRemaining)}` : undefined}
+          locale={locale}
+          hint={compare ? `${compareShort}: ${formatCompactCurrency(compareRemaining, "BDT", locale)}` : undefined}
         />
       </div>
 
       {excludedCount > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand/30 bg-brand-soft/50 px-4 py-2.5 text-[13px]">
           <span className="text-text-secondary">
-            <span className="font-semibold text-text-primary">{excludedCount}</span> categor
-            {excludedCount === 1 ? "y" : "ies"} left out of these totals
+            {t.rich("categoriesLeftOut", {
+              count: excludedCount,
+              b: (chunks) => <span className="font-semibold text-text-primary">{chunks}</span>,
+            })}
           </span>
           <button
             type="button"
@@ -126,7 +134,7 @@ export function BudgetResults({
             className="inline-flex items-center gap-1 font-medium text-brand hover:underline"
           >
             <Undo2 className="h-3.5 w-3.5" strokeWidth={2} />
-            Count all
+            {t("countAll")}
           </button>
         </div>
       )}
@@ -134,7 +142,7 @@ export function BudgetResults({
       {compare ? (
         <Card className="p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-text-primary">Month comparison</h3>
+            <h3 className="text-sm font-semibold text-text-primary">{t("monthComparison")}</h3>
             <span className="text-[12.5px] text-text-muted">
               {baseLabel} vs {compareLabel}
             </span>
@@ -150,7 +158,7 @@ export function BudgetResults({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
           <Card className="p-5 lg:col-span-3">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-text-primary">Budget vs. spent</h3>
+              <h3 className="text-sm font-semibold text-text-primary">{t("budgetVsSpent")}</h3>
               <span className="text-[12.5px] text-text-muted">{baseLabel}</span>
             </div>
             <BudgetTable rows={baseRows} budgets={budgets} selection={selection} />
@@ -158,7 +166,7 @@ export function BudgetResults({
 
           <Card className="p-5 lg:col-span-2">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-text-primary">Progress</h3>
+              <h3 className="text-sm font-semibold text-text-primary">{t("progress")}</h3>
             </div>
             <BudgetProgressChart data={selectedBase} />
           </Card>

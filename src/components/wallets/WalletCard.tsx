@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 import { ArrowRight } from "lucide-react";
 import { cx } from "@/components/cx";
 import { WALLET_TYPE_META } from "@/lib/categories";
@@ -10,7 +11,7 @@ export function walletColor(wallet: Wallet): string {
   return `var(--series-${WALLET_TYPE_META[wallet.type].slot})`;
 }
 
-export function WalletCard({
+export async function WalletCard({
   wallet,
   transactionCount,
   className,
@@ -19,6 +20,12 @@ export function WalletCard({
   transactionCount?: number;
   className?: string;
 }) {
+  const [t, tWalletTypes, tCommon, locale] = await Promise.all([
+    getTranslations("Wallets"),
+    getTranslations("WalletTypes"),
+    getTranslations("Common"),
+    getLocale(),
+  ]);
   const meta = WALLET_TYPE_META[wallet.type];
   const Icon = meta.icon;
   const color = walletColor(wallet);
@@ -45,7 +52,7 @@ export function WalletCard({
         <div className="flex items-center gap-1.5">
           {wallet.archived && (
             <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11.5px] font-medium text-text-muted">
-              Archived
+              {tCommon("archived")}
             </span>
           )}
           <span
@@ -55,7 +62,7 @@ export function WalletCard({
               color,
             }}
           >
-            {meta.label}
+            {tWalletTypes(wallet.type)}
           </span>
         </div>
       </div>
@@ -64,16 +71,16 @@ export function WalletCard({
           {wallet.name}
         </p>
         <p className="mt-0.5 text-xl font-semibold tracking-tight text-text-primary">
-          {formatCurrency(wallet.balance, wallet.currency)}
+          {formatCurrency(wallet.balance, wallet.currency, locale)}
         </p>
       </div>
       {typeof transactionCount === "number" && (
         <p className="text-[12.5px] text-text-muted">
-          {transactionCount} transaction{transactionCount === 1 ? "" : "s"}
+          {t("transactionCount", { count: transactionCount })}
         </p>
       )}
       <span className="mt-auto inline-flex items-center gap-1 text-[13px] font-medium text-brand opacity-0 transition-opacity group-hover:opacity-100">
-        View details <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
+        {t("viewDetails")} <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
       </span>
     </Link>
   );

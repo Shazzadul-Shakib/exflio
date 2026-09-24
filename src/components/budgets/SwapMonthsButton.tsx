@@ -1,6 +1,8 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { ArrowLeftRight } from "lucide-react";
 
 /** Swaps the base month (`year`/`month`) with the comparison month (`cy`/`cm`). */
@@ -15,6 +17,7 @@ export function SwapMonthsButton({
   compareYear: number;
   compareMonth: number;
 }) {
+  const t = useTranslations("Budgets");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -32,8 +35,8 @@ export function SwapMonthsButton({
     <button
       type="button"
       onClick={swap}
-      aria-label="Swap the two months"
-      title="Swap months"
+      aria-label={t("swapMonthsAria")}
+      title={t("swapMonths")}
       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary"
     >
       <ArrowLeftRight className="h-4 w-4" strokeWidth={2} />

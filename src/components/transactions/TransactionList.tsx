@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Loader2, X } from "lucide-react";
 import { TransactionTable } from "./TransactionTable";
@@ -20,6 +21,9 @@ export function TransactionList({
   wallets: Wallet[];
   scopeWalletIds?: string[];
 }) {
+  const t = useTranslations("Transactions");
+  const tCommon = useTranslations("Common");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const [items, setItems] = useState(initialItems);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -93,9 +97,9 @@ export function TransactionList({
       {selected.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand/30 bg-brand-soft/50 px-4 py-2.5 text-[13px]">
           <span className="text-text-secondary">
-            <span className="font-semibold text-text-primary">{selected.length}</span> selected
+            <span className="font-semibold text-text-primary">{selected.length}</span> {t("selectedTotal")}
             <span className="mx-2 text-text-muted">·</span>
-            total <span className="font-semibold text-text-primary tabular-nums">{formatCurrency(selectedTotal)}</span>
+            {tCommon("total")} <span className="font-semibold text-text-primary tabular-nums">{formatCurrency(selectedTotal, "BDT", locale)}</span>
           </span>
           <button
             type="button"
@@ -103,14 +107,14 @@ export function TransactionList({
             className="inline-flex items-center gap-1 font-medium text-brand hover:underline"
           >
             <X className="h-3.5 w-3.5" strokeWidth={2} />
-            Clear selection
+            {t("clearSelection")}
           </button>
         </div>
       )}
       <TransactionTable transactions={items} wallets={wallets} selection={selection} />
       {hasMore && (
         <div ref={sentinelRef} className="flex items-center justify-center py-4">
-          {pending && <Loader2 className="h-4 w-4 animate-spin text-text-muted" strokeWidth={2} aria-label="Loading more transactions" />}
+          {pending && <Loader2 className="h-4 w-4 animate-spin text-text-muted" strokeWidth={2} aria-label={t("loadingMore")} />}
         </div>
       )}
     </div>

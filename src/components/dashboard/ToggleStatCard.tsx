@@ -35,11 +35,13 @@ export function ToggleStatCard({
   icon,
   accent = "neutral",
   views,
+  locale = "en",
 }: {
   /** A rendered icon element — components can't cross the server/client boundary as props, so pass `<Icon />`, not `Icon`. */
   icon: ReactNode;
   accent?: keyof typeof accentStyles;
   views: StatView[];
+  locale?: string;
 }) {
   const [active, setActive] = useState(0);
   const view = views[active] ?? views[0];
@@ -68,7 +70,7 @@ export function ToggleStatCard({
       </div>
       <div className="flex items-baseline gap-2">
         <span className="text-2xl font-semibold tracking-tight text-text-primary">
-          {formatCompactCurrency(view.value)}
+          {formatCompactCurrency(view.value, "BDT", locale)}
         </span>
       </div>
       {hasDelta ? (

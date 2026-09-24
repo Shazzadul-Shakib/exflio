@@ -1,5 +1,5 @@
 import type { Budget, Transaction, TransactionKind, Wallet, WalletType } from "./types";
-import { monthLabel, shiftYearMonth, todayIso } from "./format";
+import { formatDate, formatDateShort, formatNumber, monthLabel, monthLabelShort, shiftYearMonth, todayIso } from "./format";
 import { DEBT_CATEGORY, SAVINGS_CATEGORY } from "./categories";
 
 /**
@@ -205,17 +205,16 @@ function dailyTotals(transactions: Transaction[], dateIso: string): { income: nu
   };
 }
 
-function dailyTrendPoints(transactions: Transaction[], startIso: string, endIso: string): TrendPoint[] {
+function dailyTrendPoints(transactions: Transaction[], startIso: string, endIso: string, locale: string): TrendPoint[] {
   const points: TrendPoint[] = [];
   let cur = startIso;
   let guard = 0;
   while (cur <= endIso && guard < 370) {
     const totals = dailyTotals(transactions, cur);
-    const d = new Date(cur + "T00:00:00");
     points.push({
       key: cur,
-      label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      fullLabel: d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      label: formatDateShort(cur, locale),
+      fullLabel: formatDate(cur, locale),
       income: totals.income,
       expense: totals.expense,
     });
@@ -255,18 +254,24 @@ function trendWindow(year: number, month: number, range: "week" | "month" | "las
  * (the page's selected month) — "week"/"month"/"last month" break it down by day, "6-months"
  * keeps the original monthly view.
  */
-export function incomeExpenseTrend(transactions: Transaction[], year: number, month: number, range: TrendRange): TrendPoint[] {
+export function incomeExpenseTrend(
+  transactions: Transaction[],
+  year: number,
+  month: number,
+  range: TrendRange,
+  locale = "en",
+): TrendPoint[] {
   if (range === "6-months") {
     return monthlyTrend(transactions, year, month, 6).map((p) => ({
       key: `${p.year}-${p.month}`,
-      label: monthLabel(p.month).slice(0, 3),
-      fullLabel: `${monthLabel(p.month)} ${p.year}`,
+      label: monthLabelShort(p.month, locale),
+      fullLabel: `${monthLabel(p.month, locale)} ${formatNumber(p.year, locale)}`,
       income: p.income,
       expense: p.expense,
     }));
   }
   const { start, end } = trendWindow(year, month, range);
-  return dailyTrendPoints(transactions, start, end);
+  return dailyTrendPoints(transactions, start, end, locale);
 }
 
 export function walletsByType(wallets: Wallet[], type: WalletType): Wallet[] {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Wallet as WalletIcon } from "lucide-react";
 import { requireUser } from "@/lib/session";
 import { getUserWallets, getUserTransactions } from "@/lib/queries";
@@ -8,12 +9,21 @@ import { EmptyState } from "@/components/ui";
 import { WALLET_TYPE_META } from "@/lib/categories";
 import type { Wallet, WalletType } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Wallets — Extrack" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Wallets" });
+  return { title: `${t("pageTitle")} — Extrack` };
+}
 
 const SECTION_ORDER: WalletType[] = ["cash", "bank", "savings", "debt"];
 
 export default async function WalletsPage() {
   const user = await requireUser();
+  const [t, tWalletTypes] = await Promise.all([getTranslations("Wallets"), getTranslations("WalletTypes")]);
   const [wallets, transactions] = await Promise.all([getUserWallets(user.id), getUserTransactions(user.id)]);
 
   const countFor = (w: Wallet) => transactions.filter((t) => t.walletId === w.id || t.toWalletId === w.id).length;
@@ -25,14 +35,14 @@ export default async function WalletsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-text-primary">Wallets</h2>
-          <p className="text-[13px] text-text-muted">Cash, bank, savings and debt accounts in one place.</p>
+          <h2 className="text-xl font-semibold tracking-tight text-text-primary">{t("pageTitle")}</h2>
+          <p className="text-[13px] text-text-muted">{t("pageDesc")}</p>
         </div>
         <CreateWalletButton wallets={wallets} />
       </div>
 
       {visibleWallets.length === 0 ? (
-        <EmptyState icon={WalletIcon} title="No wallets yet" description="Create your first wallet to start tracking money." action={<CreateWalletButton label="Create a wallet" wallets={wallets} />} />
+        <EmptyState icon={WalletIcon} title={t("noWalletsTitle")} description={t("noWalletsDesc")} action={<CreateWalletButton label={t("createFirstWallet")} wallets={wallets} />} />
       ) : (
         SECTION_ORDER.map((type) => {
           const group = visibleWallets.filter((w) => w.type === type);
@@ -42,7 +52,7 @@ export default async function WalletsPage() {
             <div key={type}>
               <h3 className="mb-3 flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wide text-text-muted">
                 <Icon className="h-3.5 w-3.5" strokeWidth={2} />
-                {WALLET_TYPE_META[type].label}
+                {tWalletTypes(type)}
               </h3>
               <div className="flex flex-wrap gap-4">
                 {group.map((w) => (

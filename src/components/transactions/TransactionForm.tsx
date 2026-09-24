@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import {
   AlertCircle,
   ArrowLeftRight,
@@ -34,6 +35,8 @@ const initialWalletState: WalletFormState = {};
  * instead, where a real starting balance (what's already owed) can be set.
  */
 function QuickWalletForm({ onCreated }: { onCreated: (wallet: Wallet) => void }) {
+  const t = useTranslations("Transactions");
+  const tWallets = useTranslations("Wallets");
   const [state, formAction, pending] = useActionState(quickCreateWalletAction, initialWalletState);
 
   useEffect(() => {
@@ -45,8 +48,8 @@ function QuickWalletForm({ onCreated }: { onCreated: (wallet: Wallet) => void })
     <form action={formAction} noValidate className="flex flex-col gap-4">
       <input type="hidden" name="type" value="savings" />
       <input type="hidden" name="balance" value="0" />
-      <Field label="Wallet name" htmlFor="quick-wallet-name" error={state.fieldErrors?.name}>
-        <Input id="quick-wallet-name" name="name" placeholder="e.g. Emergency Fund" autoFocus required />
+      <Field label={tWallets("walletName")} htmlFor="quick-wallet-name" error={state.fieldErrors?.name}>
+        <Input id="quick-wallet-name" name="name" placeholder={t("quickWalletNamePlaceholder")} autoFocus required />
       </Field>
       {state.error && (
         <p
@@ -58,7 +61,7 @@ function QuickWalletForm({ onCreated }: { onCreated: (wallet: Wallet) => void })
         </p>
       )}
       <Button type="submit" loading={pending} className="mt-1 w-full">
-        {pending ? "Creating…" : "Create savings wallet"}
+        {pending ? tWallets("creatingWallet") : t("createSavingsWallet")}
       </Button>
     </form>
   );
@@ -80,12 +83,11 @@ function availableBalance(wallet: Wallet, original?: Transaction): number {
 
 const KIND_OPTIONS: {
   value: TransactionKind;
-  label: string;
   icon: LucideIcon;
 }[] = [
-  { value: "expense", label: "Expense", icon: TrendingDown },
-  { value: "income", label: "Income", icon: TrendingUp },
-  { value: "transfer", label: "Transfer", icon: ArrowLeftRight },
+  { value: "expense", icon: TrendingDown },
+  { value: "income", icon: TrendingUp },
+  { value: "transfer", icon: ArrowLeftRight },
 ];
 
 export function TransactionForm({
@@ -99,6 +101,11 @@ export function TransactionForm({
   transaction?: Transaction;
   onSuccess?: () => void;
 }) {
+  const t = useTranslations("Transactions");
+  const tCommon = useTranslations("Common");
+  const tCategories = useTranslations("Categories");
+  const tWallets = useTranslations("Wallets");
+  const locale = useLocale();
   const isEdit = !!transaction;
   const action = isEdit
     ? updateTransactionAction.bind(null, transaction.id)
@@ -180,7 +187,7 @@ export function TransactionForm({
                   className="sr-only"
                 />
                 <Icon className="h-4 w-4" strokeWidth={2} />
-                {opt.label}
+                {tCommon(opt.value === "expense" ? "kindExpense" : opt.value === "income" ? "kindIncome" : "kindTransfer")}
               </label>
             );
           })}
@@ -190,12 +197,12 @@ export function TransactionForm({
         <input type="hidden" name="kind" value={submittedKind} />
 
         <Field
-          label="Amount"
+          label={t("amount")}
           htmlFor="amount"
           error={
             state.fieldErrors?.amount ??
             (insufficientFunds
-              ? `Only ${formatCurrency(available!, selectedWallet!.currency)} available in ${selectedWallet!.name}.`
+              ? tWallets("onlyAvailable", { amount: formatCurrency(available!, selectedWallet!.currency, locale), name: selectedWallet!.name })
               : undefined)
           }
         >
@@ -214,7 +221,7 @@ export function TransactionForm({
         </Field>
 
         <Field
-          label={kind === "transfer" ? "From wallet" : "Wallet"}
+          label={t("kindLabel", { kind })}
           htmlFor="walletId"
           error={state.fieldErrors?.walletId}
         >
@@ -226,17 +233,17 @@ export function TransactionForm({
             required
           >
             <option value="" disabled>
-              Choose a wallet
+              {tCommon("chooseWallet")}
             </option>
             {wallets.map((w) => (
-              <option key={w.id} value={w.id}>{`${w.name} (${walletBalanceLabel(w)})`}</option>
+              <option key={w.id} value={w.id}>{`${w.name} (${walletBalanceLabel(w, tWallets, locale)})`}</option>
             ))}
           </Select>
         </Field>
 
         {kind === "transfer" && (
           <Field
-            label="To wallet"
+            label={t("toWallet")}
             htmlFor="toWalletId"
             error={state.fieldErrors?.toWalletId}
           >
@@ -247,10 +254,10 @@ export function TransactionForm({
               required
             >
               <option value="" disabled>
-                Choose a wallet
+                {tCommon("chooseWallet")}
               </option>
               {wallets.map((w) => (
-                <option key={w.id} value={w.id}>{`${w.name} (${walletBalanceLabel(w)})`}</option>
+                <option key={w.id} value={w.id}>{`${w.name} (${walletBalanceLabel(w, tWallets, locale)})`}</option>
               ))}
             </Select>
           </Field>
@@ -258,7 +265,7 @@ export function TransactionForm({
 
         {kind !== "transfer" && (
           <Field
-            label="Category"
+            label={tCommon("category")}
             htmlFor="category"
             error={state.fieldErrors?.category}
           >
@@ -273,11 +280,11 @@ export function TransactionForm({
               required
             >
               <option value="" disabled>
-                Choose a category
+                {tCommon("chooseCategory")}
               </option>
               {categoryOptions.map((c) => (
                 <option key={c.name} value={c.name}>
-                  {c.name}
+                  {tCategories(c.name)}
                 </option>
               ))}
             </Select>
@@ -287,7 +294,7 @@ export function TransactionForm({
         {targetType && (
           <>
             <Field
-              label={targetType === "debt" ? "Which debt wallet" : "Which savings wallet"}
+              label={targetType === "debt" ? t("whichDebtWallet") : t("whichSavingsWallet")}
               htmlFor="targetWalletId"
               error={state.fieldErrors?.toWalletId}
             >
@@ -300,23 +307,23 @@ export function TransactionForm({
                   required
                 >
                   <option value="" disabled>
-                    Choose a wallet
+                    {tCommon("chooseWallet")}
                   </option>
                   {targetCandidates.map((w) => (
-                    <option key={w.id} value={w.id}>{`${w.name} (${walletBalanceLabel(w)})`}</option>
+                    <option key={w.id} value={w.id}>{`${w.name} (${walletBalanceLabel(w, tWallets, locale)})`}</option>
                   ))}
                 </Select>
               ) : targetType === "debt" ? (
                 <>
                   <input type="hidden" name="toWalletId" value="" />
                   <p className="text-[13px] text-text-muted">
-                    You don&apos;t have a debt wallet yet. A debt payment clears an existing balance, so add a debt
-                    wallet from the{" "}
-                    <Link href="/debts" className="font-medium text-brand hover:underline">
-                      Debts page
-                    </Link>{" "}
-                    first — set its starting balance to what you already owe — then come back to record this
-                    payment.
+                    {t.rich("noDebtWalletYet", {
+                      link: (chunks) => (
+                        <Link href="/debts" className="font-medium text-brand hover:underline">
+                          {chunks}
+                        </Link>
+                      ),
+                    })}
                   </p>
                 </>
               ) : (
@@ -330,13 +337,13 @@ export function TransactionForm({
                 className="-mt-2 inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-brand hover:underline"
               >
                 <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-                Create a savings wallet
+                {t("createSavingsWallet")}
               </button>
             )}
           </>
         )}
 
-        <Field label="Date" htmlFor="date" error={state.fieldErrors?.date}>
+        <Field label={t("date")} htmlFor="date" error={state.fieldErrors?.date}>
           <Input
             id="date"
             name="date"
@@ -347,11 +354,11 @@ export function TransactionForm({
           />
         </Field>
 
-        <Field label="Description" htmlFor="note">
+        <Field label={t("description")} htmlFor="note">
           <Input
             id="note"
             name="note"
-            placeholder="What was this for?"
+            placeholder={t("descriptionPlaceholder")}
             defaultValue={transaction?.note}
             maxLength={140}
           />
@@ -368,11 +375,11 @@ export function TransactionForm({
         )}
 
         <Button type="submit" loading={pending} disabled={insufficientFunds || missingTargetWallet} className="mt-1 w-full">
-          {pending ? "Saving…" : isEdit ? "Save changes" : "Add transaction"}
+          {pending ? tCommon("saving") : isEdit ? tCommon("saveChanges") : t("addTransaction")}
         </Button>
       </form>
       {targetType === "savings" && (
-        <Modal open={createWalletOpen} onClose={() => setCreateWalletOpen(false)} title="New savings wallet">
+        <Modal open={createWalletOpen} onClose={() => setCreateWalletOpen(false)} title={t("newSavingsWallet")}>
           <QuickWalletForm
             onCreated={(wallet) => {
               setExtraWallet(wallet);

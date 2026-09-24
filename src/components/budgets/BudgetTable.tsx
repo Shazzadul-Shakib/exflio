@@ -1,3 +1,6 @@
+"use client";
+
+import { useLocale, useTranslations } from "next-intl";
 import { Target } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import { BudgetRowActions } from "./BudgetRowActions";
@@ -28,12 +31,16 @@ export function BudgetTable({
   showActions?: boolean;
   selection?: BudgetSelection;
 }) {
+  const t = useTranslations("Budgets");
+  const tCommon = useTranslations("Common");
+  const tCategories = useTranslations("Categories");
+  const locale = useLocale();
   if (rows.length === 0) {
     return (
       <EmptyState
         icon={Target}
-        title="No budgets yet"
-        description="Set a monthly budget per category to compare it against what you actually spend."
+        title={t("noBudgetsTitle")}
+        description={t("noBudgetsDesc")}
       />
     );
   }
@@ -57,14 +64,14 @@ export function BudgetTable({
                     if (el) el.indeterminate = someSelected;
                   }}
                   onChange={(e) => selection.onToggleAll(e.target.checked)}
-                  aria-label="Count every category toward the totals"
+                  aria-label={t("countEveryCategory")}
                 />
               </th>
             )}
-            <th className="px-4 py-3 font-medium">Category</th>
-            <th className="px-4 py-3 text-right font-medium">Budgeted</th>
-            <th className="px-4 py-3 text-right font-medium">Spent</th>
-            <th className="px-4 py-3 text-right font-medium">Remaining</th>
+            <th className="px-4 py-3 font-medium">{tCommon("category")}</th>
+            <th className="px-4 py-3 text-right font-medium">{t("budgeted")}</th>
+            <th className="px-4 py-3 text-right font-medium">{t("spent")}</th>
+            <th className="px-4 py-3 text-right font-medium">{t("remaining")}</th>
             {showActions && <th className="px-4 py-3" />}
           </tr>
         </thead>
@@ -88,7 +95,7 @@ export function BudgetTable({
                       className="h-3.5 w-3.5 cursor-pointer accent-brand align-middle"
                       checked={included}
                       onChange={() => selection.onToggleRow(row.category)}
-                      aria-label={`Count ${row.category} toward the totals`}
+                      aria-label={t("countCategory", { category: tCategories(row.category) })}
                     />
                   </td>
                 )}
@@ -99,21 +106,21 @@ export function BudgetTable({
                       style={{ background: `var(--series-${categorySlot(row.category)})` }}
                     />
                     <CategoryIcon className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
-                    {row.category}
+                    {tCategories(row.category)}
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-text-primary">
-                  {formatCurrency(row.budgeted)}
+                  {formatCurrency(row.budgeted, "BDT", locale)}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-text-primary">
-                  {formatCurrency(row.spent)}
+                  {formatCurrency(row.spent, "BDT", locale)}
                 </td>
                 <td
                   className={`whitespace-nowrap px-4 py-3 text-right tabular-nums font-medium ${
                     over ? "text-status-critical" : "text-status-good"
                   }`}
                 >
-                  {over ? `-${formatCurrency(Math.abs(row.remaining))}` : formatCurrency(row.remaining)}
+                  {over ? `-${formatCurrency(Math.abs(row.remaining), "BDT", locale)}` : formatCurrency(row.remaining, "BDT", locale)}
                 </td>
                 {showActions && (
                   <td className="whitespace-nowrap px-2 py-3">

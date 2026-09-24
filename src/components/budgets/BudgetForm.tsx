@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { AlertCircle } from "lucide-react";
 import {
   createBudgetAction,
@@ -9,7 +10,7 @@ import {
 } from "@/app/actions/budgets";
 import { Button, Field, Input, Select } from "@/components/ui";
 import { EXPENSE_CATEGORIES } from "@/lib/categories";
-import { MONTH_NAMES, currentYearMonth } from "@/lib/format";
+import { getMonthNames, currentYearMonth } from "@/lib/format";
 import type { Budget } from "@/lib/types";
 
 const initialState: BudgetFormState = {};
@@ -28,6 +29,12 @@ export function BudgetForm({
   defaultMonth?: number;
   onSuccess?: () => void;
 }) {
+  const t = useTranslations("Budgets");
+  const tCommon = useTranslations("Common");
+  const tCategories = useTranslations("Categories");
+  const tMonthYearPicker = useTranslations("MonthYearPicker");
+  const locale = useLocale();
+  const monthNames = getMonthNames(locale);
   const isEdit = !!budget;
   const action = isEdit ? updateBudgetAction.bind(null, budget.id) : createBudgetAction;
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -54,16 +61,16 @@ export function BudgetForm({
   return (
     <form action={formAction} noValidate className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Month" htmlFor="month" error={state.fieldErrors?.month}>
+        <Field label={tMonthYearPicker("month")} htmlFor="month" error={state.fieldErrors?.month}>
           <Select id="month" name="month" value={month} onChange={(e) => setMonth(Number(e.target.value))} required>
-            {MONTH_NAMES.map((name, i) => (
+            {monthNames.map((name, i) => (
               <option key={name} value={i + 1}>
                 {name}
               </option>
             ))}
           </Select>
         </Field>
-        <Field label="Year" htmlFor="year" error={state.fieldErrors?.year}>
+        <Field label={tMonthYearPicker("year")} htmlFor="year" error={state.fieldErrors?.year}>
           <Select id="year" name="year" value={year} onChange={(e) => setYear(Number(e.target.value))} required>
             {years.map((y) => (
               <option key={y} value={y}>
@@ -74,25 +81,25 @@ export function BudgetForm({
         </Field>
       </div>
 
-      <Field label="Category" htmlFor="category" error={state.fieldErrors?.category}>
+      <Field label={tCommon("category")} htmlFor="category" error={state.fieldErrors?.category}>
         <Select id="category" name="category" value={category} onChange={(e) => setCategory(e.target.value)} required>
           <option value="" disabled>
-            Choose a category
+            {tCommon("chooseCategory")}
           </option>
           {EXPENSE_CATEGORIES.map((c) => (
             <option key={c.name} value={c.name} disabled={usedCategories.has(c.name)}>
-              {usedCategories.has(c.name) ? `${c.name} (already budgeted)` : c.name}
+              {usedCategories.has(c.name) ? t("categoryAlreadyBudgeted", { category: tCategories(c.name) }) : tCategories(c.name)}
             </option>
           ))}
         </Select>
       </Field>
       {noCategoriesLeft && (
         <p className="-mt-2 text-[12.5px] text-text-muted">
-          Every category already has a budget for that month — pick a different month, or edit the existing one.
+          {t("noCategoriesLeft")}
         </p>
       )}
 
-      <Field label="Budget amount" htmlFor="amount" error={state.fieldErrors?.amount}>
+      <Field label={t("budgetAmount")} htmlFor="amount" error={state.fieldErrors?.amount}>
         <Input
           id="amount"
           name="amount"
@@ -106,8 +113,8 @@ export function BudgetForm({
         />
       </Field>
 
-      <Field label="Note (optional)" htmlFor="note">
-        <Input id="note" name="note" placeholder="e.g. Groceries + eating out" defaultValue={budget?.note} maxLength={140} />
+      <Field label={tCommon("noteOptional")} htmlFor="note">
+        <Input id="note" name="note" placeholder={t("budgetNotePlaceholder")} defaultValue={budget?.note} maxLength={140} />
       </Field>
 
       {state.error && (
@@ -118,7 +125,7 @@ export function BudgetForm({
       )}
 
       <Button type="submit" loading={pending} disabled={!category} className="mt-1 w-full">
-        {pending ? "Saving…" : isEdit ? "Save changes" : "Create budget"}
+        {pending ? t("creatingBudget") : isEdit ? tCommon("saveChanges") : t("createBudgetSubmit")}
       </Button>
     </form>
   );

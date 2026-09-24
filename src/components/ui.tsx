@@ -7,7 +7,7 @@ import {
   type ReactElement,
   type LabelHTMLAttributes,
 } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { Loader2, type LucideIcon } from "lucide-react";
 import { cx } from "@/components/cx";
 import { Dropdown } from "@/components/Dropdown";

@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import { formatCurrency } from "@/lib/format";
+import { useLocale, useTranslations } from "next-intl";
+import { formatCompactNumber, formatCurrency } from "@/lib/format";
 import type { TrendPoint } from "@/lib/finance";
 
 const WIDTH = 640;
@@ -21,6 +22,8 @@ function niceMax(value: number): number {
 }
 
 export function TrendChart({ data }: { data: TrendPoint[] }) {
+  const t = useTranslations("TrendChart");
+  const locale = useLocale();
   const gradientId = useId();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
@@ -61,14 +64,14 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
             className="h-2 w-2 rounded-full"
             style={{ background: "var(--series-1)" }}
           />
-          Income
+          {t("income")}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span
             className="h-2 w-2 rounded-full"
             style={{ background: "var(--series-2)" }}
           />
-          Expense
+          {t("expense")}
         </span>
       </div>
 
@@ -77,7 +80,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           className="w-full"
           role="img"
-          aria-label="Monthly income versus expense trend"
+          aria-label={t("chartLabel")}
           onMouseLeave={() => setHoverIndex(null)}
         >
           <defs>
@@ -109,7 +112,7 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
                 fontSize="10.5"
                 fill="var(--text-muted)"
               >
-                {v >= 1000 ? `${Math.round(v / 1000)}K` : Math.round(v)}
+                {formatCompactNumber(Math.round(v), locale)}
               </text>
             </g>
           ))}
@@ -209,9 +212,9 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
                 className="h-1.5 w-1.5 rounded-full"
                 style={{ background: "var(--series-1)" }}
               />{" "}
-              Income{" "}
+              {t("income")}{" "}
               <span className="font-medium text-text-primary">
-                {formatCurrency(hovered.income)}
+                {formatCurrency(hovered.income, "BDT", locale)}
               </span>
             </p>
             <p className="flex items-center gap-1.5 text-text-secondary">
@@ -219,9 +222,9 @@ export function TrendChart({ data }: { data: TrendPoint[] }) {
                 className="h-1.5 w-1.5 rounded-full"
                 style={{ background: "var(--series-2)" }}
               />{" "}
-              Expense{" "}
+              {t("expense")}{" "}
               <span className="font-medium text-text-primary">
-                {formatCurrency(hovered.expense)}
+                {formatCurrency(hovered.expense, "BDT", locale)}
               </span>
             </p>
           </div>

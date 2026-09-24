@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { AlertCircle } from "lucide-react";
 import {
   createWalletAction,
@@ -23,6 +24,10 @@ export function WalletForm({
   defaultType?: WalletType;
   onSuccess?: () => void;
 }) {
+  const t = useTranslations("Wallets");
+  const tCommon = useTranslations("Common");
+  const tWalletTypes = useTranslations("WalletTypes");
+  const locale = useLocale();
   const [state, formAction, pending] = useActionState(
     createWalletAction,
     initialState,
@@ -43,10 +48,10 @@ export function WalletForm({
 
   return (
     <form action={formAction} noValidate className="flex flex-col gap-4">
-      <Field label="Wallet name" htmlFor="name" error={state.fieldErrors?.name}>
-        <Input id="name" name="name" placeholder="e.g. Travel fund" required />
+      <Field label={t("walletName")} htmlFor="name" error={state.fieldErrors?.name}>
+        <Input id="name" name="name" placeholder={t("walletNamePlaceholder")} required />
       </Field>
-      <Field label="Type" htmlFor="type" error={state.fieldErrors?.type}>
+      <Field label={t("type")} htmlFor="type" error={state.fieldErrors?.type}>
         <Select
           id="type"
           name="type"
@@ -54,20 +59,20 @@ export function WalletForm({
           onChange={(e) => setType(e.target.value as WalletType)}
           required
         >
-          {TYPES.map((t) => (
-            <option key={t} value={t}>
-              {WALLET_TYPE_META[t].label}
+          {TYPES.map((wt) => (
+            <option key={wt} value={wt}>
+              {tWalletTypes(wt)}
             </option>
           ))}
         </Select>
       </Field>
       <Field
-        label="Starting balance"
+        label={t("startingBalance")}
         htmlFor="balance"
         error={
           state.fieldErrors?.balance ??
           (insufficientFunds
-            ? `Only ${formatCurrency(fundingWallet!.balance, fundingWallet!.currency)} available in ${fundingWallet!.name}.`
+            ? t("onlyAvailable", { amount: formatCurrency(fundingWallet!.balance, fundingWallet!.currency, locale), name: fundingWallet!.name })
             : undefined)
         }
       >
@@ -84,34 +89,34 @@ export function WalletForm({
       </Field>
       {type !== "debt" && !fundingWalletId && balanceNum > 0 && (
         <p className="-mt-2 text-[12.5px] text-text-muted">
-          Recorded as income, so it shows up in your monthly totals.
+          {t("recordedAsIncome")}
         </p>
       )}
       {type === "savings" && fundingCandidates.length > 0 && (
         <>
-          <Field label="Fund from wallet (optional)" htmlFor="fundingWalletId">
+          <Field label={t("fundFromWallet")} htmlFor="fundingWalletId">
             <Select
               id="fundingWalletId"
               name="fundingWalletId"
               value={fundingWalletId}
               onChange={(e) => setFundingWalletId(e.target.value)}
             >
-              <option value="">Don&apos;t move money — just set the balance</option>
+              <option value="">{t("dontMoveMoney")}</option>
               {fundingCandidates.map((w) => (
-                <option key={w.id} value={w.id}>{`${w.name} (${walletBalanceLabel(w)})`}</option>
+                <option key={w.id} value={w.id}>{`${w.name} (${walletBalanceLabel(w, t, locale)})`}</option>
               ))}
             </Select>
           </Field>
           <p className="-mt-2 text-[12.5px] text-text-muted">
-            Picking a wallet moves the starting balance out of it and logs the move in both wallets&apos; history.
+            {t("fundingMovesBalance")}
           </p>
         </>
       )}
-      <Field label="Note (optional)" htmlFor="note">
+      <Field label={tCommon("noteOptional")} htmlFor="note">
         <Input
           id="note"
           name="note"
-          placeholder="What's this wallet for?"
+          placeholder={t("walletNotePlaceholder")}
           maxLength={140}
         />
       </Field>
@@ -125,7 +130,7 @@ export function WalletForm({
         </p>
       )}
       <Button type="submit" loading={pending} disabled={insufficientFunds} className="mt-1 w-full">
-        {pending ? "Creating…" : "Create wallet"}
+        {pending ? t("creatingWallet") : t("createWallet")}
       </Button>
     </form>
   );

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { ChevronDown, SlidersHorizontal, Search } from "lucide-react";
 import { cx, Input, Select } from "@/components/ui";
 import { ALL_CATEGORIES } from "@/lib/categories";
@@ -14,6 +16,9 @@ export function FilterBar({
   wallets?: Wallet[];
   showWalletFilter?: boolean;
 }) {
+  const t = useTranslations("Transactions");
+  const tCommon = useTranslations("Common");
+  const tCategories = useTranslations("Categories");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -60,9 +65,9 @@ export function FilterBar({
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search description or category…"
+          placeholder={t("searchPlaceholder")}
           className="pl-9"
-          aria-label="Search transactions"
+          aria-label={t("searchLabel")}
         />
       </div>
 
@@ -72,7 +77,7 @@ export function FilterBar({
         className="flex items-center gap-2 self-start text-[13px] font-medium text-text-secondary sm:hidden"
       >
         <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={2} />
-        Filters
+        {t("filters")}
         {hasActiveFilters && (
           <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-brand px-1 text-[11px] font-semibold text-brand-contrast">
             {activeFilterCount}
@@ -93,24 +98,24 @@ export function FilterBar({
             setParam("kind", e.target.value === "all" ? "" : e.target.value)
           }
           className="w-full sm:w-36"
-          aria-label="Filter by type"
+          aria-label={t("filterByType")}
         >
-          <option value="all">All types</option>
-          <option value="expense">Expense</option>
-          <option value="income">Income</option>
-          <option value="transfer">Transfer</option>
+          <option value="all">{t("allTypes")}</option>
+          <option value="expense">{tCommon("kindExpense")}</option>
+          <option value="income">{tCommon("kindIncome")}</option>
+          <option value="transfer">{tCommon("kindTransfer")}</option>
         </Select>
 
         <Select
           value={searchParams.get("category") ?? ""}
           onChange={(e) => setParam("category", e.target.value)}
           className="w-full sm:w-44"
-          aria-label="Filter by category"
+          aria-label={t("filterByCategory")}
         >
-          <option value="">All categories</option>
+          <option value="">{t("allCategories")}</option>
           {ALL_CATEGORIES.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {tCategories(c)}
             </option>
           ))}
         </Select>
@@ -120,9 +125,9 @@ export function FilterBar({
             value={searchParams.get("walletId") ?? ""}
             onChange={(e) => setParam("walletId", e.target.value)}
             className="w-full sm:w-40"
-            aria-label="Filter by wallet"
+            aria-label={t("filterByWallet")}
           >
-            <option value="">All wallets</option>
+            <option value="">{t("allWallets")}</option>
             {wallets.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
@@ -137,7 +142,7 @@ export function FilterBar({
             value={searchParams.get("from") ?? ""}
             onChange={(e) => setParam("from", e.target.value)}
             className="w-full sm:w-40"
-            aria-label="From date"
+            aria-label={t("fromDate")}
           />
           <span className="hidden shrink-0 text-text-muted sm:inline">–</span>
           <Input
@@ -145,7 +150,7 @@ export function FilterBar({
             value={searchParams.get("to") ?? ""}
             onChange={(e) => setParam("to", e.target.value)}
             className="w-full sm:w-40"
-            aria-label="To date"
+            aria-label={t("toDate")}
           />
         </div>
 
@@ -153,12 +158,12 @@ export function FilterBar({
           value={searchParams.get("sort") ?? "date_desc"}
           onChange={(e) => setParam("sort", e.target.value)}
           className="w-full sm:ml-auto sm:w-40"
-          aria-label="Sort transactions"
+          aria-label={t("sortTransactions")}
         >
-          <option value="date_desc">Newest first</option>
-          <option value="date_asc">Oldest first</option>
-          <option value="amount_desc">Amount: high to low</option>
-          <option value="amount_asc">Amount: low to high</option>
+          <option value="date_desc">{t("sortNewest")}</option>
+          <option value="date_asc">{t("sortOldest")}</option>
+          <option value="amount_desc">{t("sortAmountDesc")}</option>
+          <option value="amount_asc">{t("sortAmountAsc")}</option>
         </Select>
 
         {hasActiveFilters && (
@@ -167,7 +172,7 @@ export function FilterBar({
             onClick={clearAll}
             className="text-[13px] font-medium text-brand hover:underline"
           >
-            Clear filters
+            {tCommon("clearFilters")}
           </button>
         )}
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Modal } from "@/components/Modal";
@@ -10,7 +11,7 @@ import type { Wallet } from "@/lib/types";
 export function AddTransactionButton({
   wallets,
   defaultWalletId,
-  label = "Add transaction",
+  label,
   variant = "primary",
   className,
 }: {
@@ -20,6 +21,7 @@ export function AddTransactionButton({
   variant?: "primary" | "secondary" | "outline";
   className?: string;
 }) {
+  const t = useTranslations("Transactions");
   const [open, setOpen] = useState(false);
 
   if (wallets.length === 0) return null;
@@ -28,9 +30,9 @@ export function AddTransactionButton({
     <>
       <Button variant={variant} className={className} onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4" strokeWidth={2.5} />
-        {label}
+        {label ?? t("addTransaction")}
       </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title="Add transaction">
+      <Modal open={open} onClose={() => setOpen(false)} title={t("newTransaction")}>
         <TransactionForm wallets={wallets} defaultWalletId={defaultWalletId} onSuccess={() => setOpen(false)} />
       </Modal>
     </>

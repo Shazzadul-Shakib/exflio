@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import { Button } from "@/components/ui";
@@ -16,6 +17,8 @@ export function TransactionRowActions({
   transaction: Transaction;
   wallets: Wallet[];
 }) {
+  const t = useTranslations("Transactions");
+  const tCommon = useTranslations("Common");
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -27,8 +30,8 @@ export function TransactionRowActions({
         type="button"
         onClick={() => setEditOpen(true)}
         className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
-        aria-label="Edit transaction"
-        title="Edit"
+        aria-label={t("editTransaction")}
+        title={tCommon("edit")}
       >
         <Pencil className="h-4 w-4" strokeWidth={2} />
       </button>
@@ -36,8 +39,8 @@ export function TransactionRowActions({
         type="button"
         onClick={() => setConfirmOpen(true)}
         className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted transition-colors hover:bg-status-critical-soft hover:text-status-critical"
-        aria-label="Delete transaction"
-        title="Delete"
+        aria-label={t("deleteTransaction")}
+        title={tCommon("delete")}
       >
         <Trash2 className="h-4 w-4" strokeWidth={2} />
       </button>
@@ -45,7 +48,7 @@ export function TransactionRowActions({
       <Modal
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        title="Edit transaction"
+        title={t("editTransaction")}
       >
         <TransactionForm
           wallets={wallets}
@@ -57,15 +60,14 @@ export function TransactionRowActions({
       <Modal
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        title="Delete transaction"
+        title={t("deleteTransaction")}
       >
         <p className="text-sm text-text-secondary">
-          This removes the transaction and reverses its effect on the wallet
-          balance. This can&apos;t be undone.
+          {t("deleteTransactionDesc")}
         </p>
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => setConfirmOpen(false)}>
-            Cancel
+            {tCommon("cancel")}
           </Button>
           <Button
             variant="danger"
@@ -82,7 +84,7 @@ export function TransactionRowActions({
               });
             }}
           >
-            {isPending ? "Deleting…" : "Delete"}
+            {isPending ? tCommon("deleting") : tCommon("delete")}
           </Button>
         </div>
       </Modal>

@@ -1,10 +1,10 @@
 import { CreditCard, LayoutDashboard, PiggyBank, Receipt, Target, Wallet } from "lucide-react";
 
 export const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/wallets", label: "Wallets", icon: Wallet },
-  { href: "/transactions", label: "Transactions", icon: Receipt },
-  { href: "/budgets", label: "Budgets", icon: Target },
-  { href: "/savings", label: "Savings", icon: PiggyBank },
-  { href: "/debts", label: "Debts", icon: CreditCard },
-];
+  { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
+  { href: "/wallets", key: "wallets", icon: Wallet },
+  { href: "/transactions", key: "transactions", icon: Receipt },
+  { href: "/budgets", key: "budgets", icon: Target },
+  { href: "/savings", key: "savings", icon: PiggyBank },
+  { href: "/debts", key: "debts", icon: CreditCard },
+] as const;

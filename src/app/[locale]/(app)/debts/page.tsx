@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 import { CreditCard } from "lucide-react";
 import { requireUser } from "@/lib/session";
 import { getUserWallets, getTransactionsPage } from "@/lib/queries";
@@ -12,7 +13,15 @@ import { TransactionList } from "@/components/transactions/TransactionList";
 import { AddTransactionButton } from "@/components/transactions/AddTransactionButton";
 import { EmptyState } from "@/components/ui";
 
-export const metadata: Metadata = { title: "Debts — Extrack" };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Debts" });
+  return { title: `${t("pageTitle")} — Extrack` };
+}
 
 export default async function DebtsPage({
   searchParams,
@@ -20,7 +29,14 @@ export default async function DebtsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const user = await requireUser();
-  const [wallets, rawParams] = await Promise.all([getUserWallets(user.id), searchParams]);
+  const [wallets, rawParams, t, tCommon, tWallets, locale] = await Promise.all([
+    getUserWallets(user.id),
+    searchParams,
+    getTranslations("Debts"),
+    getTranslations("Common"),
+    getTranslations("Wallets"),
+    getLocale(),
+  ]);
 
   // History includes archived (paid-off) debt wallets too, so a cleared debt's
   // transactions stay visible here even after it drops off the active list below.
@@ -38,14 +54,14 @@ export default async function DebtsPage({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-text-primary">Debts</h2>
-          <p className="text-[13px] text-text-muted">Credit cards and loans — what you owe, at a glance.</p>
+          <h2 className="text-xl font-semibold tracking-tight text-text-primary">{t("pageTitle")}</h2>
+          <p className="text-[13px] text-text-muted">{t("pageDesc")}</p>
         </div>
-        <CreateWalletButton label="Add debt wallet" wallets={wallets} defaultType="debt" />
+        <CreateWalletButton label={t("addDebtWallet")} wallets={wallets} defaultType="debt" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total owed" value={totalDebt(wallets)} icon={CreditCard} accent="critical" hint={`${debtWallets.length} wallet${debtWallets.length === 1 ? "" : "s"}`} />
+        <StatCard label={t("totalOwed")} value={totalDebt(wallets)} icon={CreditCard} accent="critical" locale={locale} hint={tCommon("walletCount", { count: debtWallets.length })} />
         {debtWallets.map((w) => (
           <WalletCard key={w.id} wallet={w} />
         ))}
@@ -54,14 +70,14 @@ export default async function DebtsPage({
       {allDebtWallets.length === 0 ? (
         <EmptyState
           icon={CreditCard}
-          title="No debt wallets yet"
-          description="Add a debt wallet for a credit card or loan to track what you owe and pay it down over time."
-          action={<CreateWalletButton label="Create a debt wallet" wallets={wallets} defaultType="debt" />}
+          title={t("noDebtWalletsTitle")}
+          description={t("noDebtWalletsDesc")}
+          action={<CreateWalletButton label={t("createDebtWallet")} wallets={wallets} defaultType="debt" />}
         />
       ) : (
         <>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-sm font-semibold text-text-primary">History</h3>
+            <h3 className="text-sm font-semibold text-text-primary">{t("history")}</h3>
             <AddTransactionButton wallets={wallets.filter((w) => !w.archived)} defaultWalletId={debtWallets[0]?.id} />
           </div>
           <FilterBar wallets={allDebtWallets} showWalletFilter />
@@ -70,10 +86,11 @@ export default async function DebtsPage({
       )}
 
       <p className="text-[12.5px] text-text-muted">
-        Tip: an <span className="font-medium text-text-primary">expense</span> on a debt wallet increases what you owe (e.g.
-        a credit card purchase); use <span className="font-medium text-text-primary">Clear debt</span> on a wallet&apos;s
-        page to pay it down. Once it&apos;s fully paid off, the wallet drops off the Wallets page — its history stays
-        visible here.
+        {t.rich("tip", {
+          expense: tCommon("kindExpense"),
+          clearDebt: tWallets("clearDebt"),
+          b: (chunks) => <span className="font-medium text-text-primary">{chunks}</span>,
+        })}
       </p>
     </div>
   );

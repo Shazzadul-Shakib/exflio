@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
@@ -28,6 +29,7 @@ export function Modal({
   title: string;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("Common");
   const dialogRef = useRef<HTMLDialogElement>(null);
   const mounted = useMounted();
 
@@ -67,7 +69,7 @@ export function Modal({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t("close")}
               className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:bg-surface-2 hover:text-text-primary"
             >
               <X className="h-4.5 w-4.5" strokeWidth={2} />
